@@ -1102,7 +1102,7 @@ function App() {
   // Apply background to body so it covers full viewport on all tabs
   useEffect(() => {
     if (activeBgUrl) {
-      document.body.style.backgroundImage = `url(${activeBgUrl})`;
+      document.body.style.backgroundImage = "url(" + activeBgUrl + ")";
       document.body.style.backgroundSize = 'cover';
       document.body.style.backgroundPosition = 'center';
       document.body.style.backgroundRepeat = 'no-repeat';
