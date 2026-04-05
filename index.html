@@ -950,7 +950,7 @@ function Thumb({
   const [src, setSrc] = useState(null);
   useEffect(() => {
     let cancelled = false;
-    sbGetFile(id).then(d => {
+    sbGetFile(String(id)).then(d => {
       if (!cancelled && d) setSrc(d);
     }).catch(() => {});
     return () => {
@@ -1189,19 +1189,19 @@ function App() {
   });
   const openPreview = async file => {
     try {
-      const d = await sbGetFile(file.id);
+      const d = await sbGetFile(String(file.id));
       if (d) setPreview({
         file,
         src: d
-      });
-    } catch {
-      alert("Could not load file.");
+      });else alert("File not found in database.");
+    } catch (e) {
+      alert("Could not load file: " + e.message);
     }
   };
   const delFile = async id => {
     if (!confirm("Delete this file?")) return;
     try {
-      await sbDelFile(id);
+      await sbDelFile(String(id));
     } catch {}
     save({
       ...data,
@@ -1233,7 +1233,7 @@ function App() {
           dataUrl = await readAsDataUrl(file);
           size = file.size;
         }
-        const id = Date.now() + Math.random();
+        const id = String(Date.now()) + "-" + String(Math.floor(Math.random() * 100000));
         const meta = {
           name: file.name,
           type: file.type,
@@ -1241,11 +1241,11 @@ function App() {
           size,
           uploadedAt: today()
         };
-        await sbSetFile(id, meta, dataUrl);
+        await sbSetFile(String(id), meta, dataUrl);
         cur = {
           ...cur,
           files: [...cur.files, {
-            id,
+            id: String(id),
             ...meta
           }]
         };
