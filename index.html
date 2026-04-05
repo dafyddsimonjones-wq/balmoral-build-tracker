@@ -28,7 +28,7 @@ const {
 
 // ── Supabase ──────────────────────────────────────────────────────────
 const SB_URL = "https://xizxdkgsqlrmnxaoknpr.supabase.co";
-const SB_KEY = "sb_publishable_QTGtE8cNyo5NyHi0hjkjPw_t1LGMbVk";
+const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhpenhka2dzcWxybW54YW9rbnByIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzMzUyMzgsImV4cCI6MjA5MDkxMTIzOH0.bVBHjagnu0gWrH7ta9RKw80_O-QcSoiXMwhqyfV_lPE";
 const H = {
   apikey: SB_KEY,
   Authorization: `Bearer ${SB_KEY}`,
@@ -1098,6 +1098,23 @@ function App() {
   const imgFiles = ffiles.filter(f => f.type?.startsWith("image/"));
   const docFiles = ffiles.filter(f => !f.type?.startsWith("image/"));
   const activeBgUrl = bgConfig.active ? bgConfig[bgConfig.active] : null;
+
+  // Apply background to body so it covers full viewport on all tabs
+  useEffect(() => {
+    if (activeBgUrl) {
+      document.body.style.backgroundImage = `url(${activeBgUrl})`;
+      document.body.style.backgroundSize = 'cover';
+      document.body.style.backgroundPosition = 'center';
+      document.body.style.backgroundRepeat = 'no-repeat';
+      document.body.style.backgroundAttachment = 'fixed';
+    } else {
+      document.body.style.backgroundImage = 'none';
+      document.body.style.background = '#f5f4f0';
+    }
+    return () => {
+      document.body.style.backgroundImage = 'none';
+    };
+  }, [activeBgUrl]);
   const markStage = (id, status) => save({
     ...data,
     stages: data.stages.map(s => s.id === id ? {
@@ -1380,10 +1397,7 @@ function App() {
     style: {
       minHeight: "100vh",
       color: "#1a2e35",
-      position: "relative",
-      backgroundImage: activeBgUrl ? `url(${activeBgUrl})` : "none",
-      backgroundSize: "cover",
-      backgroundPosition: "center"
+      position: "relative"
     }
   }, activeBgUrl && /*#__PURE__*/React.createElement("div", {
     style: {
@@ -1398,8 +1412,7 @@ function App() {
       position: "relative",
       zIndex: 1,
       minHeight: "100vh",
-      background: activeBgUrl ? "transparent" : "#f5f4f0",
-      transition: "background 0.3s"
+      background: "transparent"
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
