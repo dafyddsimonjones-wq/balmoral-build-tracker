@@ -15,10 +15,18 @@
   </style>
 </head>
 <body>
-  <div id="root"><div style="font-family:sans-serif;padding:2rem;color:#555">Loading Balmoral Build Tracker…</div></div>
-  <script type="module">
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import ReactDOM from 'react-dom/client';
+  <div id="root"><div style="font-family:sans-serif;padding:2rem;color:#555">Loading…</div></div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js" crossorigin></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js" crossorigin></script>
+
+  <script>
+const {
+  useState,
+  useEffect,
+  useCallback,
+  useRef
+} = React;
 
 // ── Supabase ──────────────────────────────────────────────────────────
 const SB_URL = "https://xizxdkgsqlrmnxaoknpr.supabase.co";
