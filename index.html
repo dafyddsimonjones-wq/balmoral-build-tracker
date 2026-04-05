@@ -60,18 +60,16 @@ async function sbSet(key, value) {
   });
 }
 async function sbGetFile(id) {
-  try {
-    const r = await fetch(`${SB_URL}/rest/v1/tracker_files?id=eq.${encodeURIComponent(String(id))}&select=data`, {
-      headers: H
-    });
-    const rows = await r.json();
-    return rows?.[0]?.data ?? null;
-  } catch {
-    return null;
-  }
+  const url = `${SB_URL}/rest/v1/tracker_files?id=eq.${encodeURIComponent(String(id))}&select=data`;
+  const r = await fetch(url, {
+    headers: H
+  });
+  const rows = await r.json();
+  console.log("sbGetFile id:", id, "status:", r.status, "rows:", rows);
+  return rows?.[0]?.data ?? null;
 }
 async function sbSetFile(id, meta, data) {
-  await fetch(`${SB_URL}/rest/v1/tracker_files`, {
+  const r = await fetch(`${SB_URL}/rest/v1/tracker_files`, {
     method: "POST",
     headers: {
       ...H,
@@ -83,6 +81,8 @@ async function sbSetFile(id, meta, data) {
       data
     })
   });
+  const txt = await r.text();
+  console.log("sbSetFile id:", id, "status:", r.status, "response:", txt);
 }
 async function sbDelFile(id) {
   await fetch(`${SB_URL}/rest/v1/tracker_files?id=eq.${encodeURIComponent(String(id))}`, {
