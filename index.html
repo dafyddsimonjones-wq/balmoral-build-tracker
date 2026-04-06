@@ -990,6 +990,7 @@ function App() {
   const [todoCat, setTodoCat] = useState("All");
   const [newTodo, setNewTodo] = useState("");
   const [editTodoId, setEditTodoId] = useState(null);
+  const [editTodoText, setEditTodoText] = useState("");
   const [editTodoTxt, setEditTodoTxt] = useState("");
   const [newPri, setNewPri] = useState("medium");
   const [newTCat, setNewTCat] = useState("Legal");
@@ -1371,9 +1372,9 @@ function App() {
           model: "claude-sonnet-4-20250514",
           max_tokens: 1000,
           system: buildPrompt(data),
-          messages: hist.map(m => ({
+          messages: hist.slice(-10).map(m => ({
             role: m.role,
-            content: m.content
+            content: String(m.content || "")
           }))
         })
       });
