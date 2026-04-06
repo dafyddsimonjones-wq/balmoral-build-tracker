@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
@@ -27,425 +28,425 @@ const {
 } = React;
 
 // ── Supabase ──────────────────────────────────────────────────────────
-const SB_URL = "https://xizxdkgsqlrmnxaoknpr.supabase.co";
-const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhpenhka2dzcWxybW54YW9rbnByIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzMzUyMzgsImV4cCI6MjA5MDkxMTIzOH0.bVBHjagnu0gWrH7ta9RKw80_O-QcSoiXMwhqyfV_lPE";
+const SB_URL = “https://xizxdkgsqlrmnxaoknpr.supabase.co”;
+const SB_KEY = “eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhpenhka2dzcWxybW54YW9rbnByIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzMzUyMzgsImV4cCI6MjA5MDkxMTIzOH0.bVBHjagnu0gWrH7ta9RKw80_O-QcSoiXMwhqyfV_lPE”;
 const H = {
-  apikey: SB_KEY,
-  Authorization: `Bearer ${SB_KEY}`,
-  "Content-Type": "application/json"
+apikey: SB_KEY,
+Authorization: `Bearer ${SB_KEY}`,
+“Content-Type”: “application/json”
 };
 async function sbGet(key) {
-  try {
-    const r = await fetch(`${SB_URL}/rest/v1/tracker_data?key=eq.${encodeURIComponent(key)}&select=value`, {
-      headers: H
-    });
-    const rows = await r.json();
-    return rows?.[0]?.value ?? null;
-  } catch {
-    return null;
-  }
+try {
+const r = await fetch(`${SB_URL}/rest/v1/tracker_data?key=eq.${encodeURIComponent(key)}&select=value`, {
+headers: H
+});
+const rows = await r.json();
+return rows?.[0]?.value ?? null;
+} catch {
+return null;
+}
 }
 async function sbSet(key, value) {
-  await fetch(`${SB_URL}/rest/v1/tracker_data`, {
-    method: "POST",
-    headers: {
-      ...H,
-      Prefer: "resolution=merge-duplicates"
-    },
-    body: JSON.stringify({
-      key,
-      value,
-      updated_at: new Date().toISOString()
-    })
-  });
+await fetch(`${SB_URL}/rest/v1/tracker_data`, {
+method: “POST”,
+headers: {
+…H,
+Prefer: “resolution=merge-duplicates”
+},
+body: JSON.stringify({
+key,
+value,
+updated_at: new Date().toISOString()
+})
+});
 }
 
 // ── Supabase Storage file functions ──────────────────────────────────
-const BUCKET = "tracker-files";
-const STORAGE_URL = SB_URL + "/storage/v1/object/" + BUCKET + "/";
+const BUCKET = “tracker-files”;
+const STORAGE_URL = SB_URL + “/storage/v1/object/” + BUCKET + “/”;
 const STORAGE_H = {
-  apikey: SB_KEY,
-  Authorization: "Bearer " + SB_KEY
+apikey: SB_KEY,
+Authorization: “Bearer “ + SB_KEY
 };
 async function sbGetFile(id) {
-  // Return a direct public URL — no fetch needed, browser loads it directly
-  return STORAGE_URL + encodeURIComponent(String(id));
+// Return a direct public URL — no fetch needed, browser loads it directly
+return STORAGE_URL + encodeURIComponent(String(id));
 }
 async function sbSetFile(id, meta, blob) {
-  // Upload raw blob to Supabase Storage
-  await fetch(STORAGE_URL + encodeURIComponent(String(id)), {
-    method: "POST",
-    headers: {
-      ...STORAGE_H,
-      "Content-Type": meta.type || "application/octet-stream",
-      "x-upsert": "true"
-    },
-    body: blob
-  });
+// Upload raw blob to Supabase Storage
+await fetch(STORAGE_URL + encodeURIComponent(String(id)), {
+method: “POST”,
+headers: {
+…STORAGE_H,
+“Content-Type”: meta.type || “application/octet-stream”,
+“x-upsert”: “true”
+},
+body: blob
+});
 }
 async function sbDelFile(id) {
-  await fetch(STORAGE_URL + encodeURIComponent(String(id)), {
-    method: "DELETE",
-    headers: STORAGE_H
-  });
+await fetch(STORAGE_URL + encodeURIComponent(String(id)), {
+method: “DELETE”,
+headers: STORAGE_H
+});
 }
 
 // ── Constants ─────────────────────────────────────────────────────────
-const DEF_PWD = "balmoral2026";
+const DEF_PWD = “balmoral2026”;
 const MAX_BYTES = 3.5 * 1024 * 1024;
-const FCATS = ["All", "Quotes & Estimates", "Plans & Drawings", "Site Photos", "Council & Legal", "Contracts", "Other"];
-const TCATS = ["All", "Legal", "Finance", "Design", "Demolition", "Comparison"];
+const FCATS = [“All”, “Quotes & Estimates”, “Plans & Drawings”, “Site Photos”, “Council & Legal”, “Contracts”, “Other”];
+const TCATS = [“All”, “Legal”, “Finance”, “Design”, “Demolition”, “Comparison”];
 
 // ── Helpers ───────────────────────────────────────────────────────────
 function today() {
-  return new Date().toLocaleDateString("en-AU", {
-    day: "numeric",
-    month: "short",
-    year: "numeric"
-  });
+return new Date().toLocaleDateString(“en-AU”, {
+day: “numeric”,
+month: “short”,
+year: “numeric”
+});
 }
 async function compressImage(file) {
-  return new Promise(resolve => {
-    const img = new Image();
-    const url = URL.createObjectURL(file);
-    img.onload = () => {
-      URL.revokeObjectURL(url);
-      let w = img.width,
-        h = img.height;
-      const max = 1400;
-      if (w > max || h > max) {
-        if (w > h) {
-          h = Math.round(h * max / w);
-          w = max;
-        } else {
-          w = Math.round(w * max / h);
-          h = max;
-        }
-      }
-      const c = document.createElement("canvas");
-      c.width = w;
-      c.height = h;
-      c.getContext("2d").drawImage(img, 0, 0, w, h);
-      c.toBlob(blob => {
-        const r = new FileReader();
-        r.onload = e => resolve({
-          dataUrl: e.target.result,
-          size: blob.size
-        });
-        r.readAsDataURL(blob);
-      }, "image/jpeg", 0.82);
-    };
-    img.onerror = () => resolve(null);
-    img.src = url;
-  });
+return new Promise(resolve => {
+const img = new Image();
+const url = URL.createObjectURL(file);
+img.onload = () => {
+URL.revokeObjectURL(url);
+let w = img.width,
+h = img.height;
+const max = 1400;
+if (w > max || h > max) {
+if (w > h) {
+h = Math.round(h * max / w);
+w = max;
+} else {
+w = Math.round(w * max / h);
+h = max;
+}
+}
+const c = document.createElement(“canvas”);
+c.width = w;
+c.height = h;
+c.getContext(“2d”).drawImage(img, 0, 0, w, h);
+c.toBlob(blob => {
+const r = new FileReader();
+r.onload = e => resolve({
+dataUrl: e.target.result,
+size: blob.size
+});
+r.readAsDataURL(blob);
+}, “image/jpeg”, 0.82);
+};
+img.onerror = () => resolve(null);
+img.src = url;
+});
 }
 function readAsDataUrl(file) {
-  return new Promise((res, rej) => {
-    const r = new FileReader();
-    r.onload = e => res(e.target.result);
-    r.onerror = rej;
-    r.readAsDataURL(file);
-  });
+return new Promise((res, rej) => {
+const r = new FileReader();
+r.onload = e => res(e.target.result);
+r.onerror = rej;
+r.readAsDataURL(file);
+});
 }
 
 // ── Default data ──────────────────────────────────────────────────────
 const INIT = {
-  contractPrice: 602840,
-  stages: [
-  // ── PRE-BUILD ──────────────────────────────────────────────────
-  {
-    id: 1,
-    name: "Initial quote",
-    desc: "Quote presented, home design agreed — Step 1",
-    status: "complete",
-    date: "Mar 2026"
-  }, {
-    id: 2,
-    name: "Preliminary agreement",
-    desc: "$3,000 deposit paid, pricing secured 180 days, soil test & surveys ordered — Step 2",
-    status: "complete",
-    date: "31 Mar 2026"
-  }, {
-    id: 3,
-    name: "Consolidated tender",
-    desc: "Final structural changes locked in, CT signed — Step 3",
-    status: "active",
-    date: ""
-  }, {
-    id: 4,
-    name: "Plan presentation",
-    desc: "Plans reviewed & accepted, Open Studio appointment — Step 4",
-    status: "pending",
-    date: ""
-  }, {
-    id: 5,
-    name: "MyChoice Studio",
-    desc: "All colour & style selections finalised and signed off — Step 5",
-    status: "pending",
-    date: ""
-  }, {
-    id: 6,
-    name: "Contract signing & electrical",
-    desc: "HIA contract signed via DocuSign, electrical layout finalised — Step 6",
-    status: "pending",
-    date: ""
-  }, {
-    id: 7,
-    name: "Building approval",
-    desc: "Plans lodged with private certifier, BA received, 5% deposit balance invoiced — Step 7",
-    status: "pending",
-    date: ""
-  }, {
-    id: 8,
-    name: "Authority to commence",
-    desc: "ACC received from lender, placed on construction list — Step 8",
-    status: "pending",
-    date: ""
-  },
-  // ── BUILD ─────────────────────────────────────────────────────
-  {
-    id: 9,
-    name: "Site start",
-    desc: "Build commences within 20 working days of ACC, Site Manager assigned — Build Step 1",
-    status: "pending",
-    date: ""
-  }, {
-    id: 10,
-    name: "Base stage",
-    desc: "Site excavation, piers if required, slab poured — 15% payment due — Build Step 2",
-    status: "pending",
-    date: ""
-  }, {
-    id: 11,
-    name: "Frame stage",
-    desc: "Frame and roof trusses installed — 20% payment due — Build Step 3",
-    status: "pending",
-    date: ""
-  }, {
-    id: 12,
-    name: "Enclosed / lockup stage",
-    desc: "Roof, windows, doors, plumbing, electrical, A/C, cladding — 30% payment due — Build Step 4",
-    status: "pending",
-    date: ""
-  }, {
-    id: 13,
-    name: "Fixing stage",
-    desc: "Plaster, joinery, tiling, cabinetry, painting, fit-offs — 20% payment due — Build Step 5",
-    status: "pending",
-    date: ""
-  }, {
-    id: 14,
-    name: "Practical completion",
-    desc: "Internal quality inspections + handovers.com inspection, PCI walkthrough — Build Step 6",
-    status: "pending",
-    date: ""
-  }, {
-    id: 15,
-    name: "Handover",
-    desc: "Keys handed over, remaining balance paid by EFT — Build Step 7",
-    status: "pending",
-    date: ""
-  }, {
-    id: 16,
-    name: "Brighton Cares (3 months)",
-    desc: "Brighton after-care team contacts you, 24-month warranty overview — Build Step 8",
-    status: "pending",
-    date: ""
-  }, {
-    id: 17,
-    name: "3-month warranty inspection",
-    desc: "Brighton warranty inspection",
-    status: "pending",
-    date: ""
-  }, {
-    id: 18,
-    name: "12-month warranty inspection",
-    desc: "Brighton warranty inspection",
-    status: "pending",
-    date: ""
-  }, {
-    id: 19,
-    name: "24-month warranty inspection",
-    desc: "Brighton warranty inspection — end of warranty period",
-    status: "pending",
-    date: ""
-  }],
-  todos: [{
-    id: 1,
-    text: "Get written confirmation deposit locks in $50k cashback & pre-price-rise pricing",
-    priority: "high",
-    done: false,
-    cat: "Legal"
-  }, {
-    id: 2,
-    text: "Get written confirmation deposit is fully refundable until consolidated tender acceptance",
-    priority: "high",
-    done: false,
-    cat: "Legal"
-  }, {
-    id: 3,
-    text: "Confirm Character Overlay cladding (~$18k) with Brighton — get written position",
-    priority: "high",
-    done: false,
-    cat: "Legal"
-  }, {
-    id: 4,
-    text: "Confirm butler's pantry addition ($5,380) for consolidated tender",
-    priority: "medium",
-    done: false,
-    cat: "Design"
-  }, {
-    id: 5,
-    text: "Confirm under-stairs cupboard door ($560) for consolidated tender",
-    priority: "medium",
-    done: false,
-    cat: "Design"
-  }, {
-    id: 6,
-    text: "Get pricing for rear garage door and walk-in robes to rear bedrooms",
-    priority: "medium",
-    done: false,
-    cat: "Design"
-  }, {
-    id: 7,
-    text: "Obtain demolition approval from council before Brighton submits for BA",
-    priority: "high",
-    done: false,
-    cat: "Demolition"
-  }, {
-    id: 8,
-    text: "Arrange asbestos inspection & Form 4 site clearance certificate",
-    priority: "high",
-    done: false,
-    cat: "Demolition"
-  }, {
-    id: 9,
-    text: "Get demolition contractor quotes",
-    priority: "medium",
-    done: false,
-    cat: "Demolition"
-  }, {
-    id: 10,
-    text: "Review consolidated tender — verify H1/H2 slab, piering & cladding figures",
-    priority: "high",
-    done: false,
-    cat: "Legal"
-  }, {
-    id: 11,
-    text: "Book independent building consultant to review HIA contract before signing",
-    priority: "high",
-    done: false,
-    cat: "Legal"
-  }, {
-    id: 12,
-    text: "Share Brighton payment schedule with mortgage broker",
-    priority: "high",
-    done: false,
-    cat: "Finance"
-  }],
-  payments: [{
-    id: 1,
-    stage: "Preliminary deposit",
-    pct: "—",
-    amount: 3000,
-    paid: true,
-    paidDate: "31 Mar 2026",
-    due: "Paid",
-    note: "Deducted from PP1. Refundable until CT acceptance."
-  }, {
-    id: 2,
-    stage: "PP1 — Statutory Approvals (5%)",
-    pct: "5%",
-    amount: null,
-    paid: false,
-    paidDate: "",
-    due: "On building approval",
-    note: "Less the $3,000 preliminary deposit already paid"
-  }, {
-    id: 3,
-    stage: "PP2 — Base / slab stage (15%)",
-    pct: "15%",
-    amount: null,
-    paid: false,
-    paidDate: "",
-    due: "On slab completion",
-    note: "Installation of concrete slab or footings"
-  }, {
-    id: 4,
-    stage: "PP3 — Frame stage (20%)",
-    pct: "20%",
-    amount: null,
-    paid: false,
-    paidDate: "",
-    due: "On frame completion",
-    note: "Erection of frame"
-  }, {
-    id: 5,
-    stage: "PP4 — Enclosed / lockup stage (30%)",
-    pct: "30%",
-    amount: null,
-    paid: false,
-    paidDate: "",
-    due: "On lockup completion",
-    note: "Brickwork, roofing, windows & guttering or 75% complete"
-  }, {
-    id: 6,
-    stage: "PP5 — Fixing stage (20%)",
-    pct: "20%",
-    amount: null,
-    paid: false,
-    paidDate: "",
-    due: "On fixing completion",
-    note: "Internal linings & kitchen cupboards, or ceramic tiling commencement"
-  }, {
-    id: 7,
-    stage: "PP6 — Practical completion (10%)",
-    pct: "10%",
-    amount: null,
-    paid: false,
-    paidDate: "",
-    due: "On handover",
-    note: "Final payment — EFT only"
-  }],
-  contacts: [{
-    id: 1,
-    name: "June Matthews",
-    role: "Building & Design Consultant",
-    company: "Brighton Homes",
-    phone: "0418 165 126",
-    email: "jmatthews@brightonhomes.net.au"
-  }, {
-    id: 2,
-    name: "Brighton Homes",
-    role: "Builder — Oscar 33, Georgia Facade",
-    company: "Brighton Homes (MJH Group)",
-    phone: "1300 893 788",
-    email: "info@brightonhomes.net.au"
-  }, {
-    id: 3,
-    name: "JJ Pools",
-    role: "Pool Builder (fibreglass & concrete)",
-    company: "JJ Pools",
-    phone: "07 3543 0498",
-    email: "sales@jjpools.com.au"
-  }, {
-    id: 4,
-    name: "Paradise Pools Australia",
-    role: "Pool Builder (fibreglass)",
-    company: "Paradise Pools Australia",
-    phone: "1300 819 060",
-    email: "info@paradise-pools.com.au"
-  }],
-  notes: [],
-  files: [],
-  chatHistory: []
+contractPrice: 602840,
+stages: [
+// ── PRE-BUILD ──────────────────────────────────────────────────
+{
+id: 1,
+name: “Initial quote”,
+desc: “Quote presented, home design agreed — Step 1”,
+status: “complete”,
+date: “Mar 2026”
+}, {
+id: 2,
+name: “Preliminary agreement”,
+desc: “$3,000 deposit paid, pricing secured 180 days, soil test & surveys ordered — Step 2”,
+status: “complete”,
+date: “31 Mar 2026”
+}, {
+id: 3,
+name: “Consolidated tender”,
+desc: “Final structural changes locked in, CT signed — Step 3”,
+status: “active”,
+date: “”
+}, {
+id: 4,
+name: “Plan presentation”,
+desc: “Plans reviewed & accepted, Open Studio appointment — Step 4”,
+status: “pending”,
+date: “”
+}, {
+id: 5,
+name: “MyChoice Studio”,
+desc: “All colour & style selections finalised and signed off — Step 5”,
+status: “pending”,
+date: “”
+}, {
+id: 6,
+name: “Contract signing & electrical”,
+desc: “HIA contract signed via DocuSign, electrical layout finalised — Step 6”,
+status: “pending”,
+date: “”
+}, {
+id: 7,
+name: “Building approval”,
+desc: “Plans lodged with private certifier, BA received, 5% deposit balance invoiced — Step 7”,
+status: “pending”,
+date: “”
+}, {
+id: 8,
+name: “Authority to commence”,
+desc: “ACC received from lender, placed on construction list — Step 8”,
+status: “pending”,
+date: “”
+},
+// ── BUILD ─────────────────────────────────────────────────────
+{
+id: 9,
+name: “Site start”,
+desc: “Build commences within 20 working days of ACC, Site Manager assigned — Build Step 1”,
+status: “pending”,
+date: “”
+}, {
+id: 10,
+name: “Base stage”,
+desc: “Site excavation, piers if required, slab poured — 15% payment due — Build Step 2”,
+status: “pending”,
+date: “”
+}, {
+id: 11,
+name: “Frame stage”,
+desc: “Frame and roof trusses installed — 20% payment due — Build Step 3”,
+status: “pending”,
+date: “”
+}, {
+id: 12,
+name: “Enclosed / lockup stage”,
+desc: “Roof, windows, doors, plumbing, electrical, A/C, cladding — 30% payment due — Build Step 4”,
+status: “pending”,
+date: “”
+}, {
+id: 13,
+name: “Fixing stage”,
+desc: “Plaster, joinery, tiling, cabinetry, painting, fit-offs — 20% payment due — Build Step 5”,
+status: “pending”,
+date: “”
+}, {
+id: 14,
+name: “Practical completion”,
+desc: “Internal quality inspections + handovers.com inspection, PCI walkthrough — Build Step 6”,
+status: “pending”,
+date: “”
+}, {
+id: 15,
+name: “Handover”,
+desc: “Keys handed over, remaining balance paid by EFT — Build Step 7”,
+status: “pending”,
+date: “”
+}, {
+id: 16,
+name: “Brighton Cares (3 months)”,
+desc: “Brighton after-care team contacts you, 24-month warranty overview — Build Step 8”,
+status: “pending”,
+date: “”
+}, {
+id: 17,
+name: “3-month warranty inspection”,
+desc: “Brighton warranty inspection”,
+status: “pending”,
+date: “”
+}, {
+id: 18,
+name: “12-month warranty inspection”,
+desc: “Brighton warranty inspection”,
+status: “pending”,
+date: “”
+}, {
+id: 19,
+name: “24-month warranty inspection”,
+desc: “Brighton warranty inspection — end of warranty period”,
+status: “pending”,
+date: “”
+}],
+todos: [{
+id: 1,
+text: “Get written confirmation deposit locks in $50k cashback & pre-price-rise pricing”,
+priority: “high”,
+done: false,
+cat: “Legal”
+}, {
+id: 2,
+text: “Get written confirmation deposit is fully refundable until consolidated tender acceptance”,
+priority: “high”,
+done: false,
+cat: “Legal”
+}, {
+id: 3,
+text: “Confirm Character Overlay cladding (~$18k) with Brighton — get written position”,
+priority: “high”,
+done: false,
+cat: “Legal”
+}, {
+id: 4,
+text: “Confirm butler’s pantry addition ($5,380) for consolidated tender”,
+priority: “medium”,
+done: false,
+cat: “Design”
+}, {
+id: 5,
+text: “Confirm under-stairs cupboard door ($560) for consolidated tender”,
+priority: “medium”,
+done: false,
+cat: “Design”
+}, {
+id: 6,
+text: “Get pricing for rear garage door and walk-in robes to rear bedrooms”,
+priority: “medium”,
+done: false,
+cat: “Design”
+}, {
+id: 7,
+text: “Obtain demolition approval from council before Brighton submits for BA”,
+priority: “high”,
+done: false,
+cat: “Demolition”
+}, {
+id: 8,
+text: “Arrange asbestos inspection & Form 4 site clearance certificate”,
+priority: “high”,
+done: false,
+cat: “Demolition”
+}, {
+id: 9,
+text: “Get demolition contractor quotes”,
+priority: “medium”,
+done: false,
+cat: “Demolition”
+}, {
+id: 10,
+text: “Review consolidated tender — verify H1/H2 slab, piering & cladding figures”,
+priority: “high”,
+done: false,
+cat: “Legal”
+}, {
+id: 11,
+text: “Book independent building consultant to review HIA contract before signing”,
+priority: “high”,
+done: false,
+cat: “Legal”
+}, {
+id: 12,
+text: “Share Brighton payment schedule with mortgage broker”,
+priority: “high”,
+done: false,
+cat: “Finance”
+}],
+payments: [{
+id: 1,
+stage: “Preliminary deposit”,
+pct: “—”,
+amount: 3000,
+paid: true,
+paidDate: “31 Mar 2026”,
+due: “Paid”,
+note: “Deducted from PP1. Refundable until CT acceptance.”
+}, {
+id: 2,
+stage: “PP1 — Statutory Approvals (5%)”,
+pct: “5%”,
+amount: null,
+paid: false,
+paidDate: “”,
+due: “On building approval”,
+note: “Less the $3,000 preliminary deposit already paid”
+}, {
+id: 3,
+stage: “PP2 — Base / slab stage (15%)”,
+pct: “15%”,
+amount: null,
+paid: false,
+paidDate: “”,
+due: “On slab completion”,
+note: “Installation of concrete slab or footings”
+}, {
+id: 4,
+stage: “PP3 — Frame stage (20%)”,
+pct: “20%”,
+amount: null,
+paid: false,
+paidDate: “”,
+due: “On frame completion”,
+note: “Erection of frame”
+}, {
+id: 5,
+stage: “PP4 — Enclosed / lockup stage (30%)”,
+pct: “30%”,
+amount: null,
+paid: false,
+paidDate: “”,
+due: “On lockup completion”,
+note: “Brickwork, roofing, windows & guttering or 75% complete”
+}, {
+id: 6,
+stage: “PP5 — Fixing stage (20%)”,
+pct: “20%”,
+amount: null,
+paid: false,
+paidDate: “”,
+due: “On fixing completion”,
+note: “Internal linings & kitchen cupboards, or ceramic tiling commencement”
+}, {
+id: 7,
+stage: “PP6 — Practical completion (10%)”,
+pct: “10%”,
+amount: null,
+paid: false,
+paidDate: “”,
+due: “On handover”,
+note: “Final payment — EFT only”
+}],
+contacts: [{
+id: 1,
+name: “June Matthews”,
+role: “Building & Design Consultant”,
+company: “Brighton Homes”,
+phone: “0418 165 126”,
+email: “jmatthews@brightonhomes.net.au”
+}, {
+id: 2,
+name: “Brighton Homes”,
+role: “Builder — Oscar 33, Georgia Facade”,
+company: “Brighton Homes (MJH Group)”,
+phone: “1300 893 788”,
+email: “info@brightonhomes.net.au”
+}, {
+id: 3,
+name: “JJ Pools”,
+role: “Pool Builder (fibreglass & concrete)”,
+company: “JJ Pools”,
+phone: “07 3543 0498”,
+email: “sales@jjpools.com.au”
+}, {
+id: 4,
+name: “Paradise Pools Australia”,
+role: “Pool Builder (fibreglass)”,
+company: “Paradise Pools Australia”,
+phone: “1300 819 060”,
+email: “info@paradise-pools.com.au”
+}],
+notes: [],
+files: [],
+chatHistory: []
 };
 
 // ── Claude prompt ─────────────────────────────────────────────────────
 function buildPrompt(d) {
-  const pending = d.todos.filter(t => !t.done);
-  const done = d.todos.filter(t => t.done);
-  return `You are a helpful assistant in the Balmoral Build Tracker for Simon Jones and Emma Stewart's knock-down rebuild at 32 Grosvenor St, Balmoral QLD 4171.
+const pending = d.todos.filter(t => !t.done);
+const done = d.todos.filter(t => t.done);
+return `You are a helpful assistant in the Balmoral Build Tracker for Simon Jones and Emma Stewart’s knock-down rebuild at 32 Grosvenor St, Balmoral QLD 4171.
 
 BUILDER: Brighton Homes | Oscar 33, Georgia Facade | Quote #766947
 CONSULTANT: June Matthews · 0418 165 126 · jmatthews@brightonhomes.net.au
@@ -454,2493 +455,2456 @@ DEPOSIT: $3,000 paid 31 Mar 2026 (fully refundable until consolidated tender acc
 INCLUSIONS: $50k cashback · 3-phase power · 3.5kW solar · Haier 4-zone ducted A/C · Fisher & Paykel appliances · Taubmans Endure paint · 2590mm ground floor ceilings · 8 quality inspections · 24-month warranty
 
 KEY RISKS:
+
 - Character Overlay cladding (sides & rear): ~$18,000 if council requires — NOT in quoted total
 - Piering: up to +$12,000 if screw piers required
 - Certainty Pricing: not yet available — confirmed at consolidated tender
 
 STAGES:
-${d.stages.map(s => `[id:${s.id}][${s.status}] ${s.name}${s.date ? " (" + s.date + ")" : ""}`).join("\n")}
+${d.stages.map(s => `[id:${s.id}][${s.status}] ${s.name}${s.date ? " (" + s.date + ")" : ""}`).join(”\n”)}
 
 PENDING TO-DOS (${pending.length}):
-${pending.map(t => `[id:${t.id}][${t.priority}][${t.cat}] ${t.text}`).join("\n")}
+${pending.map(t => `[id:${t.id}][${t.priority}][${t.cat}] ${t.text}`).join(”\n”)}
 
-COMPLETED: ${done.map(t => `[id:${t.id}] ${t.text}`).join(" | ") || "none"}
+COMPLETED: ${done.map(t => `[id:${t.id}] ${t.text}`).join(” | “) || “none”}
 
 PAYMENTS:
-${d.payments.map(p => `[id:${p.id}] ${p.stage}: ${p.amount ? "$" + p.amount.toLocaleString() : "TBC"} — ${p.paid ? "PAID " + p.paidDate : "unpaid"}`).join("\n")}
+${d.payments.map(p => `[id:${p.id}] ${p.stage}: ${p.amount ? "$" + p.amount.toLocaleString() : "TBC"} — ${p.paid ? "PAID " + p.paidDate : "unpaid"}`).join(”\n”)}
 
-CONTACTS: ${d.contacts.map(c => `${c.name} (${c.phone})`).join(", ")}
+CONTACTS: ${d.contacts.map(c => `${c.name} (${c.phone})`).join(”, “)}
 FILES: ${d.files.length} uploaded
-NOTES: ${d.notes.map(n => n.date + ": " + n.text).join(" | ") || "none"}
+NOTES: ${d.notes.map(n => n.date + “: “ + n.text).join(” | “) || “none”}
 
 You can update the tracker with an ACTIONS block (only when user asks for changes):
 <ACTIONS>
 [
-  {"type":"add_todo","text":"...","priority":"high|medium|low","cat":"Legal|Finance|Design|Demolition|Comparison"},
-  {"type":"complete_todo","id":1},
-  {"type":"delete_todo","id":1},
-  {"type":"update_stage","id":2,"status":"complete|active|pending","date":"15 Apr 2026"},
-  {"type":"add_note","text":"..."},
-  {"type":"add_contact","name":"...","role":"...","company":"...","phone":"...","email":"..."},
-  {"type":"update_payment","id":3,"amount":90000,"paid":true,"paidDate":"1 Jun 2026"},
-  {"type":"set_contract_price","amount":620840}
+{“type”:“add_todo”,“text”:”…”,“priority”:“high|medium|low”,“cat”:“Legal|Finance|Design|Demolition|Comparison”},
+{“type”:“complete_todo”,“id”:1},
+{“type”:“delete_todo”,“id”:1},
+{“type”:“update_stage”,“id”:2,“status”:“complete|active|pending”,“date”:“15 Apr 2026”},
+{“type”:“add_note”,“text”:”…”},
+{“type”:“add_contact”,“name”:”…”,“role”:”…”,“company”:”…”,“phone”:”…”,“email”:”…”},
+{“type”:“update_payment”,“id”:3,“amount”:90000,“paid”:true,“paidDate”:“1 Jun 2026”},
+{“type”:“set_contract_price”,“amount”:620840}
 ]
 </ACTIONS>
-Be warm, concise and practical. Summarise changes made in plain English.`;
+Be warm, concise and practical. Summarise changes made in plain English.`; } function applyActions(data, actions) { let d = { ...data, todos: [...data.todos], stages: [...data.stages], payments: [...data.payments], contacts: [...data.contacts], notes: [...data.notes] }; const log = []; for (const a of actions) { try { if (a.type === "add_todo") { d.todos = [...d.todos, { id: Date.now() + Math.random(), text: a.text, priority: a.priority || "medium", done: false, cat: a.cat || "Legal" }]; log.push(`Added: “${a.text}”`); } else if (a.type === "complete_todo") { const t = d.todos.find(t => t.id === a.id); d.todos = d.todos.map(t => t.id === a.id ? { ...t, done: true } : t); if (t) log.push(`Completed: “${t.text}”`); } else if (a.type === "delete_todo") { const t = d.todos.find(t => t.id === a.id); d.todos = d.todos.filter(t => t.id !== a.id); if (t) log.push(`Deleted: “${t.text}”`); } else if (a.type === "update_stage") { const s = d.stages.find(s => s.id === a.id); d.stages = d.stages.map(s => s.id === a.id ? { ...s, ...(a.status && { status: a.status }), ...(a.date !== undefined && { date: a.date }) } : s); if (s) log.push(`Stage “${s.name}” → ${a.status || “updated”}`); } else if (a.type === "add_note") { d.notes = [...d.notes, { id: Date.now() + Math.random(), text: a.text, date: today() }]; log.push("Note added"); } else if (a.type === "add_contact") { d.contacts = [...d.contacts, { id: Date.now() + Math.random(), name: a.name, role: a.role || "", company: a.company || "", phone: a.phone || "", email: a.email || "" }]; log.push(`Contact: ${a.name}`); } else if (a.type === "update_payment") { d.payments = d.payments.map(p => p.id === a.id ? { ...p, ...(a.amount !== undefined && { amount: a.amount }), ...(a.paid !== undefined && { paid: a.paid }), ...(a.paidDate && { paidDate: a.paidDate }) } : p); log.push("Payment updated"); } else if (a.type === "set_contract_price") { d.contractPrice = a.amount; log.push(`Contract price → $${a.amount.toLocaleString()}`);
 }
-function applyActions(data, actions) {
-  let d = {
-    ...data,
-    todos: [...data.todos],
-    stages: [...data.stages],
-    payments: [...data.payments],
-    contacts: [...data.contacts],
-    notes: [...data.notes]
-  };
-  const log = [];
-  for (const a of actions) {
-    try {
-      if (a.type === "add_todo") {
-        d.todos = [...d.todos, {
-          id: Date.now() + Math.random(),
-          text: a.text,
-          priority: a.priority || "medium",
-          done: false,
-          cat: a.cat || "Legal"
-        }];
-        log.push(`Added: "${a.text}"`);
-      } else if (a.type === "complete_todo") {
-        const t = d.todos.find(t => t.id === a.id);
-        d.todos = d.todos.map(t => t.id === a.id ? {
-          ...t,
-          done: true
-        } : t);
-        if (t) log.push(`Completed: "${t.text}"`);
-      } else if (a.type === "delete_todo") {
-        const t = d.todos.find(t => t.id === a.id);
-        d.todos = d.todos.filter(t => t.id !== a.id);
-        if (t) log.push(`Deleted: "${t.text}"`);
-      } else if (a.type === "update_stage") {
-        const s = d.stages.find(s => s.id === a.id);
-        d.stages = d.stages.map(s => s.id === a.id ? {
-          ...s,
-          ...(a.status && {
-            status: a.status
-          }),
-          ...(a.date !== undefined && {
-            date: a.date
-          })
-        } : s);
-        if (s) log.push(`Stage "${s.name}" → ${a.status || "updated"}`);
-      } else if (a.type === "add_note") {
-        d.notes = [...d.notes, {
-          id: Date.now() + Math.random(),
-          text: a.text,
-          date: today()
-        }];
-        log.push("Note added");
-      } else if (a.type === "add_contact") {
-        d.contacts = [...d.contacts, {
-          id: Date.now() + Math.random(),
-          name: a.name,
-          role: a.role || "",
-          company: a.company || "",
-          phone: a.phone || "",
-          email: a.email || ""
-        }];
-        log.push(`Contact: ${a.name}`);
-      } else if (a.type === "update_payment") {
-        d.payments = d.payments.map(p => p.id === a.id ? {
-          ...p,
-          ...(a.amount !== undefined && {
-            amount: a.amount
-          }),
-          ...(a.paid !== undefined && {
-            paid: a.paid
-          }),
-          ...(a.paidDate && {
-            paidDate: a.paidDate
-          })
-        } : p);
-        log.push("Payment updated");
-      } else if (a.type === "set_contract_price") {
-        d.contractPrice = a.amount;
-        log.push(`Contract price → $${a.amount.toLocaleString()}`);
-      }
-    } catch (e) {
-      console.warn("action failed", a, e);
-    }
-  }
-  return {
-    d,
-    log
-  };
+} catch (e) {
+console.warn(“action failed”, a, e);
+}
+}
+return {
+d,
+log
+};
 }
 
 // ── Styles object ─────────────────────────────────────────────────────
 const C = {
-  card: {
-    background: "rgba(255,255,255,0.82)",
-    backdropFilter: "blur(4px)",
-    borderRadius: "12px",
-    padding: "1rem",
-    border: "1px solid rgba(232,229,222,0.7)",
-    marginBottom: "12px"
-  },
-  met: {
-    background: "rgba(255,255,255,0.82)",
-    backdropFilter: "blur(4px)",
-    borderRadius: "10px",
-    padding: "1rem 1.25rem",
-    border: "1px solid rgba(232,229,222,0.7)",
-    flex: "1 1 120px"
-  },
-  inp: {
-    width: "100%",
-    padding: "9px 12px",
-    borderRadius: "8px",
-    border: "1px solid #dedad2",
-    fontSize: "13px",
-    background: "#faf9f7",
-    fontFamily: "'Nunito Sans',sans-serif",
-    outline: "none"
-  },
-  btn: v => ({
-    padding: "8px 16px",
-    borderRadius: "8px",
-    fontSize: "13px",
-    fontWeight: "500",
-    cursor: "pointer",
-    border: "none",
-    fontFamily: "'Nunito Sans',sans-serif",
-    background: v === "pri" ? "#006d7c" : v === "red" ? "#fee2e2" : "#f0ede6",
-    color: v === "pri" ? "#fff" : v === "red" ? "#c0392b" : "#4a5568"
-  }),
-  sel: {
-    padding: "8px 10px",
-    borderRadius: "8px",
-    border: "1px solid #dedad2",
-    fontSize: "13px",
-    background: "#faf9f7",
-    fontFamily: "'Nunito Sans',sans-serif",
-    cursor: "pointer"
-  },
-  pill: a => ({
-    padding: "5px 14px",
-    borderRadius: "20px",
-    border: "1px solid",
-    fontSize: "12px",
-    fontWeight: "500",
-    cursor: "pointer",
-    background: a ? "#006d7c" : "#fff",
-    color: a ? "#fff" : "#5a6e7a",
-    borderColor: a ? "#006d7c" : "#dedad2"
-  }),
-  dot: s => ({
-    width: "12px",
-    height: "12px",
-    borderRadius: "50%",
-    flexShrink: 0,
-    marginTop: "4px",
-    background: s === "complete" ? "#006d7c" : s === "active" ? "#00b9cc" : "#d1cdc4"
-  }),
-  tag: c => ({
-    display: "inline-block",
-    fontSize: "10px",
-    fontWeight: "600",
-    padding: "2px 7px",
-    borderRadius: "4px",
-    background: c + "20",
-    color: c,
-    marginRight: "5px",
-    textTransform: "uppercase",
-    letterSpacing: "0.4px"
-  }),
-  h: {
-    fontFamily: "'Playfair Display',serif",
-    fontSize: "17px",
-    fontWeight: "600",
-    color: "#006d7c",
-    marginBottom: "14px"
-  },
-  row: {
-    padding: "8px 0",
-    borderBottom: "1px solid #f0ede6",
-    display: "flex",
-    gap: "10px",
-    alignItems: "flex-start"
-  }
+card: {
+background: “rgba(255,255,255,0.82)”,
+backdropFilter: “blur(4px)”,
+borderRadius: “12px”,
+padding: “1rem”,
+border: “1px solid rgba(232,229,222,0.7)”,
+marginBottom: “12px”
+},
+met: {
+background: “rgba(255,255,255,0.82)”,
+backdropFilter: “blur(4px)”,
+borderRadius: “10px”,
+padding: “1rem 1.25rem”,
+border: “1px solid rgba(232,229,222,0.7)”,
+flex: “1 1 120px”
+},
+inp: {
+width: “100%”,
+padding: “9px 12px”,
+borderRadius: “8px”,
+border: “1px solid #dedad2”,
+fontSize: “13px”,
+background: “#faf9f7”,
+fontFamily: “‘Nunito Sans’,sans-serif”,
+outline: “none”
+},
+btn: v => ({
+padding: “8px 16px”,
+borderRadius: “8px”,
+fontSize: “13px”,
+fontWeight: “500”,
+cursor: “pointer”,
+border: “none”,
+fontFamily: “‘Nunito Sans’,sans-serif”,
+background: v === “pri” ? “#006d7c” : v === “red” ? “#fee2e2” : “#f0ede6”,
+color: v === “pri” ? “#fff” : v === “red” ? “#c0392b” : “#4a5568”
+}),
+sel: {
+padding: “8px 10px”,
+borderRadius: “8px”,
+border: “1px solid #dedad2”,
+fontSize: “13px”,
+background: “#faf9f7”,
+fontFamily: “‘Nunito Sans’,sans-serif”,
+cursor: “pointer”
+},
+pill: a => ({
+padding: “5px 14px”,
+borderRadius: “20px”,
+border: “1px solid”,
+fontSize: “12px”,
+fontWeight: “500”,
+cursor: “pointer”,
+background: a ? “#006d7c” : “#fff”,
+color: a ? “#fff” : “#5a6e7a”,
+borderColor: a ? “#006d7c” : “#dedad2”
+}),
+dot: s => ({
+width: “12px”,
+height: “12px”,
+borderRadius: “50%”,
+flexShrink: 0,
+marginTop: “4px”,
+background: s === “complete” ? “#006d7c” : s === “active” ? “#00b9cc” : “#d1cdc4”
+}),
+tag: c => ({
+display: “inline-block”,
+fontSize: “10px”,
+fontWeight: “600”,
+padding: “2px 7px”,
+borderRadius: “4px”,
+background: c + “20”,
+color: c,
+marginRight: “5px”,
+textTransform: “uppercase”,
+letterSpacing: “0.4px”
+}),
+h: {
+fontFamily: “‘Playfair Display’,serif”,
+fontSize: “17px”,
+fontWeight: “600”,
+color: “#006d7c”,
+marginBottom: “14px”
+},
+row: {
+padding: “8px 0”,
+borderBottom: “1px solid #f0ede6”,
+display: “flex”,
+gap: “10px”,
+alignItems: “flex-start”
+}
 };
 
 // ── Login ─────────────────────────────────────────────────────────────
 function Login({
-  onAuth,
-  correctPwd
+onAuth,
+correctPwd
 }) {
-  const [pwd, setPwd] = useState("");
-  const [err, setErr] = useState("");
-  const attempt = () => {
-    if (!pwd.trim()) {
-      setErr("Please enter the password.");
-      return;
-    }
-    if (pwd.trim() === correctPwd) {
-      onAuth();
-    } else {
-      setErr("Incorrect password — please try again.");
-    }
-  };
-  return /*#__PURE__*/React.createElement("div", {
-    style: {
-      minHeight: "100vh",
-      background: "linear-gradient(135deg,#006d7c 0%,#004f5a 100%)",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      padding: "1rem"
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      background: "#fff",
-      borderRadius: "16px",
-      padding: "2.5rem",
-      width: "100%",
-      maxWidth: "360px",
-      boxShadow: "0 24px 64px rgba(0,0,0,0.25)"
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      textAlign: "center",
-      marginBottom: "2rem"
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      width: "52px",
-      height: "52px",
-      borderRadius: "50%",
-      background: "linear-gradient(135deg,#006d7c,#004f5a)",
-      margin: "0 auto 1rem",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center"
-    }
-  }, /*#__PURE__*/React.createElement("svg", {
-    width: "22",
-    height: "22",
-    viewBox: "0 0 24 24",
-    fill: "none",
-    stroke: "white",
-    strokeWidth: "2.5",
-    strokeLinecap: "round",
-    strokeLinejoin: "round"
-  }, /*#__PURE__*/React.createElement("rect", {
-    x: "3",
-    y: "11",
-    width: "18",
-    height: "11",
-    rx: "2"
-  }), /*#__PURE__*/React.createElement("path", {
-    d: "M7 11V7a5 5 0 0110 0v4"
-  }))), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontFamily: "'Playfair Display',serif",
-      fontSize: "22px",
-      fontWeight: "600",
-      color: "#006d7c"
-    }
-  }, "Balmoral Build Tracker"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: "13px",
-      color: "#7a8e99",
-      marginTop: "6px"
-    }
-  }, "32 Grosvenor St, Balmoral QLD")), /*#__PURE__*/React.createElement("input", {
-    type: "password",
-    placeholder: "Enter password",
-    value: pwd,
-    onChange: e => {
-      setPwd(e.target.value);
-      setErr("");
-    },
-    onKeyDown: e => e.key === "Enter" && attempt(),
-    autoFocus: true,
-    style: {
-      ...C.inp,
-      padding: "13px 14px",
-      fontSize: "15px",
-      border: `2px solid ${err ? "#fca5a5" : "#e0dbd0"}`,
-      background: err ? "#fff5f5" : "#faf9f6",
-      marginBottom: "10px"
-    }
-  }), err && /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: "13px",
-      color: "#c0392b",
-      marginBottom: "10px"
-    }
-  }, "\u26A0 ", err), /*#__PURE__*/React.createElement("button", {
-    onClick: attempt,
-    style: {
-      width: "100%",
-      padding: "13px",
-      borderRadius: "10px",
-      background: "linear-gradient(135deg,#006d7c,#004f5a)",
-      color: "#fff",
-      border: "none",
-      fontSize: "15px",
-      fontWeight: "600",
-      cursor: "pointer",
-      fontFamily: "'Nunito Sans',sans-serif"
-    }
-  }, "Enter"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: "11px",
-      color: "#c0bdb5",
-      textAlign: "center",
-      marginTop: "1.5rem"
-    }
-  }, "Default: balmoral2026 \xB7 Change in Settings")));
+const [pwd, setPwd] = useState(””);
+const [err, setErr] = useState(””);
+const attempt = () => {
+if (!pwd.trim()) {
+setErr(“Please enter the password.”);
+return;
+}
+if (pwd.trim() === correctPwd) {
+onAuth();
+} else {
+setErr(“Incorrect password — please try again.”);
+}
+};
+return /*#**PURE***/React.createElement(“div”, {
+style: {
+minHeight: “100vh”,
+background: “linear-gradient(135deg,#006d7c 0%,#004f5a 100%)”,
+display: “flex”,
+alignItems: “center”,
+justifyContent: “center”,
+padding: “1rem”
+}
+}, /*#**PURE***/React.createElement(“div”, {
+style: {
+background: “#fff”,
+borderRadius: “16px”,
+padding: “2.5rem”,
+width: “100%”,
+maxWidth: “360px”,
+boxShadow: “0 24px 64px rgba(0,0,0,0.25)”
+}
+}, /*#**PURE***/React.createElement(“div”, {
+style: {
+textAlign: “center”,
+marginBottom: “2rem”
+}
+}, /*#**PURE***/React.createElement(“div”, {
+style: {
+width: “52px”,
+height: “52px”,
+borderRadius: “50%”,
+background: “linear-gradient(135deg,#006d7c,#004f5a)”,
+margin: “0 auto 1rem”,
+display: “flex”,
+alignItems: “center”,
+justifyContent: “center”
+}
+}, /*#**PURE***/React.createElement(“svg”, {
+width: “22”,
+height: “22”,
+viewBox: “0 0 24 24”,
+fill: “none”,
+stroke: “white”,
+strokeWidth: “2.5”,
+strokeLinecap: “round”,
+strokeLinejoin: “round”
+}, /*#**PURE***/React.createElement(“rect”, {
+x: “3”,
+y: “11”,
+width: “18”,
+height: “11”,
+rx: “2”
+}), /*#**PURE***/React.createElement(“path”, {
+d: “M7 11V7a5 5 0 0110 0v4”
+}))), /*#**PURE***/React.createElement(“div”, {
+style: {
+fontFamily: “‘Playfair Display’,serif”,
+fontSize: “22px”,
+fontWeight: “600”,
+color: “#006d7c”
+}
+}, “Balmoral Build Tracker”), /*#**PURE***/React.createElement(“div”, {
+style: {
+fontSize: “13px”,
+color: “#7a8e99”,
+marginTop: “6px”
+}
+}, “32 Grosvenor St, Balmoral QLD”)), /*#**PURE***/React.createElement(“input”, {
+type: “password”,
+placeholder: “Enter password”,
+value: pwd,
+onChange: e => {
+setPwd(e.target.value);
+setErr(””);
+},
+onKeyDown: e => e.key === “Enter” && attempt(),
+autoFocus: true,
+style: {
+…C.inp,
+padding: “13px 14px”,
+fontSize: “15px”,
+border: `2px solid ${err ? "#fca5a5" : "#e0dbd0"}`,
+background: err ? “#fff5f5” : “#faf9f6”,
+marginBottom: “10px”
+}
+}), err && /*#**PURE***/React.createElement(“div”, {
+style: {
+fontSize: “13px”,
+color: “#c0392b”,
+marginBottom: “10px”
+}
+}, “\u26A0 “, err), /*#**PURE***/React.createElement(“button”, {
+onClick: attempt,
+style: {
+width: “100%”,
+padding: “13px”,
+borderRadius: “10px”,
+background: “linear-gradient(135deg,#006d7c,#004f5a)”,
+color: “#fff”,
+border: “none”,
+fontSize: “15px”,
+fontWeight: “600”,
+cursor: “pointer”,
+fontFamily: “‘Nunito Sans’,sans-serif”
+}
+}, “Enter”), /*#**PURE***/React.createElement(“div”, {
+style: {
+fontSize: “11px”,
+color: “#c0bdb5”,
+textAlign: “center”,
+marginTop: “1.5rem”
+}
+}, “Default: balmoral2026 \xB7 Change in Settings”)));
 }
 
 // ── Preview modal ─────────────────────────────────────────────────────
 function Preview({
-  file,
-  src,
-  onClose
+file,
+src,
+onClose
 }) {
-  useEffect(() => {
-    const h = e => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", h);
-    return () => window.removeEventListener("keydown", h);
-  }, [onClose]);
-  const isImg = file.type?.startsWith("image/");
-  const isPdf = file.type === "application/pdf";
-  return /*#__PURE__*/React.createElement("div", {
-    onClick: onClose,
-    style: {
-      position: "fixed",
-      inset: 0,
-      background: "rgba(0,0,0,0.88)",
-      zIndex: 9999,
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      padding: "1rem"
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    onClick: e => e.stopPropagation(),
-    style: {
-      background: "#fff",
-      borderRadius: "12px",
-      overflow: "hidden",
-      maxWidth: "900px",
-      width: "100%",
-      maxHeight: "92vh",
-      display: "flex",
-      flexDirection: "column"
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "flex",
-      justifyContent: "space-between",
-      alignItems: "center",
-      padding: "12px 16px",
-      borderBottom: "1px solid #e8e5de",
-      flexShrink: 0
-    }
-  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontWeight: "600",
-      fontSize: "14px"
-    }
-  }, file.name), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: "12px",
-      color: "#7a8e99"
-    }
-  }, file.cat, " \xB7 ", Math.round((file.size || 0) / 1024), "KB \xB7 ", file.uploadedAt)), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "flex",
-      gap: "8px"
-    }
-  }, /*#__PURE__*/React.createElement("a", {
-    href: src,
-    download: file.name,
-    style: {
-      padding: "7px 14px",
-      borderRadius: "8px",
-      background: "#006d7c",
-      color: "#fff",
-      textDecoration: "none",
-      fontSize: "13px",
-      fontWeight: "500"
-    }
-  }, "Download"), /*#__PURE__*/React.createElement("button", {
-    onClick: onClose,
-    style: {
-      padding: "7px 12px",
-      borderRadius: "8px",
-      border: "1px solid #dedad2",
-      background: "#fff",
-      cursor: "pointer",
-      fontSize: "13px"
-    }
-  }, "Close"))), /*#__PURE__*/React.createElement("div", {
-    style: {
-      flex: 1,
-      overflow: "auto",
-      background: "#f5f4f0",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      minHeight: "300px"
-    }
-  }, isImg && /*#__PURE__*/React.createElement("img", {
-    src: src,
-    alt: file.name,
-    style: {
-      maxWidth: "100%",
-      maxHeight: "72vh",
-      objectFit: "contain"
-    }
-  }), isPdf && /*#__PURE__*/React.createElement("iframe", {
-    src: src,
-    title: file.name,
-    style: {
-      width: "100%",
-      height: "72vh",
-      border: "none"
-    }
-  }), !isImg && !isPdf && /*#__PURE__*/React.createElement("div", {
-    style: {
-      textAlign: "center",
-      padding: "2rem",
-      color: "#5a6e7a"
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: "48px",
-      marginBottom: "12px"
-    }
-  }, "\uD83D\uDCC4"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontWeight: "600",
-      marginBottom: "16px"
-    }
-  }, file.name), /*#__PURE__*/React.createElement("a", {
-    href: src,
-    download: file.name,
-    style: {
-      padding: "9px 22px",
-      borderRadius: "8px",
-      background: "#006d7c",
-      color: "#fff",
-      textDecoration: "none",
-      fontSize: "13px"
-    }
-  }, "Download")))));
+useEffect(() => {
+const h = e => {
+if (e.key === “Escape”) onClose();
+};
+window.addEventListener(“keydown”, h);
+return () => window.removeEventListener(“keydown”, h);
+}, [onClose]);
+const isImg = file.type?.startsWith(“image/”);
+const isPdf = file.type === “application/pdf”;
+return /*#**PURE***/React.createElement(“div”, {
+onClick: onClose,
+style: {
+position: “fixed”,
+inset: 0,
+background: “rgba(0,0,0,0.88)”,
+zIndex: 9999,
+display: “flex”,
+alignItems: “center”,
+justifyContent: “center”,
+padding: “1rem”
+}
+}, /*#**PURE***/React.createElement(“div”, {
+onClick: e => e.stopPropagation(),
+style: {
+background: “#fff”,
+borderRadius: “12px”,
+overflow: “hidden”,
+maxWidth: “900px”,
+width: “100%”,
+maxHeight: “92vh”,
+display: “flex”,
+flexDirection: “column”
+}
+}, /*#**PURE***/React.createElement(“div”, {
+style: {
+display: “flex”,
+justifyContent: “space-between”,
+alignItems: “center”,
+padding: “12px 16px”,
+borderBottom: “1px solid #e8e5de”,
+flexShrink: 0
+}
+}, /*#**PURE***/React.createElement(“div”, null, /*#**PURE***/React.createElement(“div”, {
+style: {
+fontWeight: “600”,
+fontSize: “14px”
+}
+}, file.name), /*#**PURE***/React.createElement(“div”, {
+style: {
+fontSize: “12px”,
+color: “#7a8e99”
+}
+}, file.cat, “ \xB7 “, Math.round((file.size || 0) / 1024), “KB \xB7 “, file.uploadedAt)), /*#**PURE***/React.createElement(“div”, {
+style: {
+display: “flex”,
+gap: “8px”
+}
+}, /*#**PURE***/React.createElement(“a”, {
+href: src,
+download: file.name,
+style: {
+padding: “7px 14px”,
+borderRadius: “8px”,
+background: “#006d7c”,
+color: “#fff”,
+textDecoration: “none”,
+fontSize: “13px”,
+fontWeight: “500”
+}
+}, “Download”), /*#**PURE***/React.createElement(“button”, {
+onClick: onClose,
+style: {
+padding: “7px 12px”,
+borderRadius: “8px”,
+border: “1px solid #dedad2”,
+background: “#fff”,
+cursor: “pointer”,
+fontSize: “13px”
+}
+}, “Close”))), /*#**PURE***/React.createElement(“div”, {
+style: {
+flex: 1,
+overflow: “auto”,
+background: “#f5f4f0”,
+display: “flex”,
+alignItems: “center”,
+justifyContent: “center”,
+minHeight: “300px”
+}
+}, isImg && /*#**PURE***/React.createElement(“img”, {
+src: src,
+alt: file.name,
+style: {
+maxWidth: “100%”,
+maxHeight: “72vh”,
+objectFit: “contain”
+}
+}), isPdf && /*#**PURE***/React.createElement(“iframe”, {
+src: src,
+title: file.name,
+style: {
+width: “100%”,
+height: “72vh”,
+border: “none”
+}
+}), !isImg && !isPdf && /*#**PURE***/React.createElement(“div”, {
+style: {
+textAlign: “center”,
+padding: “2rem”,
+color: “#5a6e7a”
+}
+}, /*#**PURE***/React.createElement(“div”, {
+style: {
+fontSize: “48px”,
+marginBottom: “12px”
+}
+}, “\uD83D\uDCC4”), /*#**PURE***/React.createElement(“div”, {
+style: {
+fontWeight: “600”,
+marginBottom: “16px”
+}
+}, file.name), /*#**PURE***/React.createElement(“a”, {
+href: src,
+download: file.name,
+style: {
+padding: “9px 22px”,
+borderRadius: “8px”,
+background: “#006d7c”,
+color: “#fff”,
+textDecoration: “none”,
+fontSize: “13px”
+}
+}, “Download”)))));
 }
 
 // ── Thumbnail ─────────────────────────────────────────────────────────
 function Thumb({
-  id
+id
 }) {
-  const [src, setSrc] = useState(null);
-  useEffect(() => {
-    let cancelled = false;
-    sbGetFile(String(id)).then(url => {
-      if (!cancelled && url) setSrc(url);
-    }).catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-  }, [id]);
-  return src ? /*#__PURE__*/React.createElement("img", {
-    src: src,
-    alt: "",
-    style: {
-      width: "100%",
-      height: "120px",
-      objectFit: "cover",
-      display: "block"
-    }
-  }) : /*#__PURE__*/React.createElement("div", {
-    style: {
-      width: "100%",
-      height: "120px",
-      background: "#e8e5de",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      color: "#7a8e99",
-      fontSize: "28px"
-    }
-  }, "\uD83D\uDDBC");
+const [src, setSrc] = useState(null);
+useEffect(() => {
+let cancelled = false;
+sbGetFile(String(id)).then(url => {
+if (!cancelled && url) setSrc(url);
+}).catch(() => {});
+return () => {
+cancelled = true;
+};
+}, [id]);
+return src ? /*#**PURE***/React.createElement(“img”, {
+src: src,
+alt: “”,
+style: {
+width: “100%”,
+height: “120px”,
+objectFit: “cover”,
+display: “block”
+}
+}) : /*#**PURE***/React.createElement(“div”, {
+style: {
+width: “100%”,
+height: “120px”,
+background: “#e8e5de”,
+display: “flex”,
+alignItems: “center”,
+justifyContent: “center”,
+color: “#7a8e99”,
+fontSize: “28px”
+}
+}, “\uD83D\uDDBC”);
+}
+function renderMarkdown(text) {
+if (!text) return null;
+var parts = String(text).split(/\n\n+/);
+return parts.map(function (para, pi) {
+var segments = [];
+var re = /**(.+?)**|*(.+?)*/g;
+var last = 0;
+var m;
+while ((m = re.exec(para)) !== null) {
+if (m.index > last) segments.push(para.slice(last, m.index));
+if (m[1]) segments.push(React.createElement(“strong”, {
+key: m.index
+}, m[1]));else if (m[2]) segments.push(React.createElement(“em”, {
+key: m.index
+}, m[2]));
+last = m.index + m[0].length;
+}
+if (last < para.length) segments.push(para.slice(last));
+var withBreaks = [];
+segments.forEach(function (seg, si) {
+if (typeof seg === “string”) {
+var lines = seg.split(”\n”);
+lines.forEach(function (line, li) {
+withBreaks.push(line);
+if (li < lines.length - 1) withBreaks.push(React.createElement(“br”, {
+key: si + “-” + li
+}));
+});
+} else {
+withBreaks.push(seg);
+}
+});
+return React.createElement(“p”, {
+key: pi,
+style: {
+marginBottom: pi < parts.length - 1 ? “0.6em” : 0
+}
+}, withBreaks);
+});
 }
 
 // ── App ───────────────────────────────────────────────────────────────
 function App() {
-  const [authed, setAuthed] = useState(true);
-  const [correctPwd, setCorrectPwd] = useState(DEF_PWD);
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState("dashboard");
-  const [todoCat, setTodoCat] = useState("All");
-  const [newTodo, setNewTodo] = useState("");
-  const [editTodoId, setEditTodoId] = useState(null);
-  const [editTodoText, setEditTodoText] = useState("");
-  const [editTodoTxt, setEditTodoTxt] = useState("");
-  const [newPri, setNewPri] = useState("medium");
-  const [newTCat, setNewTCat] = useState("Legal");
-  const [newNote, setNewNote] = useState("");
-  const [newCon, setNewCon] = useState({
-    name: "",
-    role: "",
-    company: "",
-    phone: "",
-    email: ""
-  });
-  const [showCon, setShowCon] = useState(false);
-  const [editSt, setEditSt] = useState(null);
-  const [stDate, setStDate] = useState("");
-  const [fileCat, setFileCat] = useState("All");
-  const [uploading, setUploading] = useState(false);
-  const [upErr, setUpErr] = useState("");
-  const [preview, setPreview] = useState(null);
-  const [dragOver, setDragOver] = useState(false);
-  const fileRef = useRef(null);
-  const [chatIn, setChatIn] = useState("");
-  const [chatBusy, setChatBusy] = useState(false);
-  const chatEnd = useRef(null);
-  const [newPwd, setNewPwd] = useState("");
-  const [confPwd, setConfPwd] = useState("");
-  const [pwdMsg, setPwdMsg] = useState("");
-  const [bgConfig, setBgConfig] = useState({
-    slot1: null,
-    slot2: null,
-    active: null
-  });
-  const [bgLoading, setBgLoading] = useState(false);
-  const [bgErr, setBgErr] = useState("");
-  const bgRef1 = useRef(null);
-  const bgRef2 = useRef(null);
-  useEffect(() => {
-    (async () => {
-      try {
-        const v = await sbGet("pwd");
-        if (v) setCorrectPwd(v);
-      } catch {}
-      try {
-        const v = await sbGet("data");
-        setData(v ? JSON.parse(v) : INIT);
-      } catch {
-        setData(INIT);
-      }
-      try {
-        const v = await sbGet("bg");
-        if (v) setBgConfig(JSON.parse(v));
-      } catch {}
-      setLoading(false);
-    })();
-  }, []);
-  useEffect(() => {
-    chatEnd.current?.scrollIntoView({
-      behavior: "smooth"
-    });
-  }, [data?.chatHistory]);
-  const save = useCallback(async next => {
-    setData(next);
-    try {
-      await sbSet("data", JSON.stringify({
-        ...next,
-        files: next.files.map(f => ({
-          ...f,
-          _src: undefined
-        }))
-      }));
-    } catch (e) {
-      console.warn("save failed", e);
-    }
-  }, []);
-  const saveBg = async next => {
-    setBgConfig(next);
-    try {
-      await sbSet("bg", JSON.stringify(next));
-    } catch {}
-  };
+const [authed, setAuthed] = useState(true);
+const [correctPwd, setCorrectPwd] = useState(DEF_PWD);
+const [data, setData] = useState(null);
+const [loading, setLoading] = useState(true);
+const [tab, setTab] = useState(“dashboard”);
+const [todoCat, setTodoCat] = useState(“All”);
+const [newTodo, setNewTodo] = useState(””);
+const [editTodoId, setEditTodoId] = useState(null);
+const [editTodoText, setEditTodoText] = useState(””);
+const [editTodoTxt, setEditTodoTxt] = useState(””);
+const [newPri, setNewPri] = useState(“medium”);
+const [newTCat, setNewTCat] = useState(“Legal”);
+const [newNote, setNewNote] = useState(””);
+const [newCon, setNewCon] = useState({
+name: “”,
+role: “”,
+company: “”,
+phone: “”,
+email: “”
+});
+const [showCon, setShowCon] = useState(false);
+const [editSt, setEditSt] = useState(null);
+const [stDate, setStDate] = useState(””);
+const [fileCat, setFileCat] = useState(“All”);
+const [uploading, setUploading] = useState(false);
+const [upErr, setUpErr] = useState(””);
+const [preview, setPreview] = useState(null);
+const [dragOver, setDragOver] = useState(false);
+const fileRef = useRef(null);
+const [chatIn, setChatIn] = useState(””);
+const [chatBusy, setChatBusy] = useState(false);
+const chatEnd = useRef(null);
+const [newPwd, setNewPwd] = useState(””);
+const [confPwd, setConfPwd] = useState(””);
+const [pwdMsg, setPwdMsg] = useState(””);
+const [bgConfig, setBgConfig] = useState({
+slot1: null,
+slot2: null,
+active: null
+});
+const [bgLoading, setBgLoading] = useState(false);
+const [bgErr, setBgErr] = useState(””);
+const bgRef1 = useRef(null);
+const bgRef2 = useRef(null);
+useEffect(() => {
+(async () => {
+try {
+const v = await sbGet(“pwd”);
+if (v) setCorrectPwd(v);
+} catch {}
+try {
+const v = await sbGet(“data”);
+setData(v ? JSON.parse(v) : INIT);
+} catch {
+setData(INIT);
+}
+try {
+const v = await sbGet(“bg”);
+if (v) setBgConfig(JSON.parse(v));
+} catch {}
+setLoading(false);
+})();
+}, []);
+useEffect(() => {
+chatEnd.current?.scrollIntoView({
+behavior: “smooth”
+});
+}, [data?.chatHistory]);
+const save = useCallback(async next => {
+setData(next);
+try {
+await sbSet(“data”, JSON.stringify({
+…next,
+files: next.files.map(f => ({
+…f,
+_src: undefined
+}))
+}));
+} catch (e) {
+console.warn(“save failed”, e);
+}
+}, []);
+const saveBg = async next => {
+setBgConfig(next);
+try {
+await sbSet(“bg”, JSON.stringify(next));
+} catch {}
+};
 
-  // Apply background to body - must be before early returns (rules of hooks)
-  // Apply background via fixed pseudo-element - consistent across all tabs
-  useEffect(() => {
-    const url = bgConfig.active ? bgConfig[bgConfig.active] : null;
-    let el = document.getElementById('bg-style');
-    if (!el) {
-      el = document.createElement('style');
-      el.id = 'bg-style';
-      document.head.appendChild(el);
-    }
-    if (url) {
-      el.textContent = 'html,body{height:100%;margin:0}body::before{content:"";position:fixed;top:0;left:0;width:100%;height:100%;background-image:url("' + url + '");background-size:cover;background-position:center;background-repeat:no-repeat;z-index:-1;}';
-      document.body.style.background = 'transparent';
-    } else {
-      el.textContent = '';
-      document.body.style.background = '#f5f4f0';
-    }
-    return () => {
-      if (el) el.textContent = '';
-    };
-  }, [bgConfig]);
-  if (!authed) return /*#__PURE__*/React.createElement(Login, {
-    onAuth: () => setAuthed(true),
-    correctPwd: correctPwd
-  });
-  if (loading || !data) return /*#__PURE__*/React.createElement("div", {
-    style: {
-      minHeight: "100vh",
-      display: "flex",
-      flexDirection: "column",
-      alignItems: "center",
-      justifyContent: "center",
-      gap: "16px",
-      background: "#f5f4f0",
-      color: "#5a6e7a",
-      fontSize: "14px"
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "spinner"
-  }), "Loading Balmoral Build Tracker\u2026");
-  const doneStages = data.stages.filter(s => s.status === "complete").length;
-  const progress = Math.round(doneStages / data.stages.length * 100);
-  const pendingN = data.todos.filter(t => !t.done).length;
-  const highN = data.todos.filter(t => !t.done && t.priority === "high").length;
-  const totalPaid = data.payments.filter(p => p.paid).reduce((s, p) => s + (p.amount || 0), 0);
-  const ftodos = todoCat === "All" ? data.todos : data.todos.filter(t => t.cat === todoCat);
-  const ffiles = fileCat === "All" ? data.files : data.files.filter(f => f.cat === fileCat);
-  const imgFiles = ffiles.filter(f => f.type?.startsWith("image/"));
-  const docFiles = ffiles.filter(f => !f.type?.startsWith("image/"));
-  const activeBgUrl = bgConfig.active ? bgConfig[bgConfig.active] : null;
-  const markStage = (id, status) => save({
-    ...data,
-    stages: data.stages.map(s => s.id === id ? {
-      ...s,
-      status
-    } : s)
-  });
-  const saveDate = (id, date) => {
-    save({
-      ...data,
-      stages: data.stages.map(s => s.id === id ? {
-        ...s,
-        date
-      } : s)
-    });
-    setEditSt(null);
-  };
-  const tickTodo = id => save({
-    ...data,
-    todos: data.todos.map(t => t.id === id ? {
-      ...t,
-      done: !t.done
-    } : t)
-  });
-  const delTodo = id => save({
-    ...data,
-    todos: data.todos.filter(t => t.id !== id)
-  });
-  const addTodo = () => {
-    if (!newTodo.trim()) return;
-    save({
-      ...data,
-      todos: [...data.todos, {
-        id: Date.now(),
-        text: newTodo.trim(),
-        priority: newPri,
-        done: false,
-        cat: newTCat
-      }]
-    });
-    setNewTodo("");
-  };
-  const saveEditTodo = id => {
-    if (!editTodoTxt.trim()) return;
-    save({
-      ...data,
-      todos: data.todos.map(t => t.id === id ? {
-        ...t,
-        text: editTodoTxt.trim()
-      } : t)
-    });
-    setEditTodoId(null);
-  };
-  const saveTodoEdit = id => {
-    if (!editTodoText.trim()) return;
-    save({
-      ...data,
-      todos: data.todos.map(t => t.id === id ? {
-        ...t,
-        text: editTodoText.trim()
-      } : t)
-    });
-    setEditTodoId(null);
-    ;
-  };
-  const addNote = () => {
-    if (!newNote.trim()) return;
-    save({
-      ...data,
-      notes: [...data.notes, {
-        id: Date.now(),
-        text: newNote.trim(),
-        date: today()
-      }]
-    });
-    setNewNote("");
-  };
-  const delNote = id => save({
-    ...data,
-    notes: data.notes.filter(n => n.id !== id)
-  });
-  const addCon = () => {
-    if (!newCon.name.trim()) return;
-    save({
-      ...data,
-      contacts: [...data.contacts, {
-        ...newCon,
-        id: Date.now()
-      }]
-    });
-    setNewCon({
-      name: "",
-      role: "",
-      company: "",
-      phone: "",
-      email: ""
-    });
-    setShowCon(false);
-  };
-  const tickPay = id => save({
-    ...data,
-    payments: data.payments.map(p => p.id === id ? {
-      ...p,
-      paid: !p.paid,
-      paidDate: !p.paid ? today() : ""
-    } : p)
-  });
-  const editPay = (id, v) => save({
-    ...data,
-    payments: data.payments.map(p => p.id === id ? {
-      ...p,
-      amount: v ? parseFloat(v) : null
-    } : p)
-  });
-  const openPreview = async file => {
-    const src = await sbGetFile(String(file.id));
-    setPreview({
-      file,
-      src
-    });
-  };
-  const delFile = async id => {
-    if (!confirm("Delete this file?")) return;
-    try {
-      await sbDelFile(String(id));
-    } catch {}
-    save({
-      ...data,
-      files: data.files.filter(f => f.id !== id)
-    });
-  };
-  const uploadFiles = async list => {
-    setUpErr("");
-    setUploading(true);
-    let cur = {
-      ...data
-    };
-    for (const file of Array.from(list)) {
-      try {
-        let blob, size;
-        if (file.type.startsWith("image/")) {
-          // Compress image then convert dataUrl back to blob for upload
-          const c = await compressImage(file);
-          if (!c) {
-            setUpErr(`Could not process "${file.name}"`);
-            continue;
-          }
-          const res = await fetch(c.dataUrl);
-          blob = await res.blob();
-          size = c.size;
-        } else {
-          if (file.size > MAX_BYTES) {
-            setUpErr(`"${file.name}" too large (max 3.5MB)`);
-            continue;
-          }
-          blob = file;
-          size = file.size;
-        }
-        const id = String(Date.now()) + "-" + String(Math.floor(Math.random() * 100000));
-        const meta = {
-          name: file.name,
-          type: file.type,
-          cat: fileCat === "All" ? "Other" : fileCat,
-          size,
-          uploadedAt: today()
-        };
-        await sbSetFile(String(id), meta, blob);
-        cur = {
-          ...cur,
-          files: [...cur.files, {
-            id: String(id),
-            ...meta
-          }]
-        };
-        await save(cur);
-      } catch (e) {
-        setUpErr(`Failed to upload "${file.name}" — ${e.message}`);
-      }
-    }
-    setUploading(false);
-  };
-  const changePwd = async () => {
-    if (!newPwd || newPwd !== confPwd) {
-      setPwdMsg("Passwords don't match.");
-      return;
-    }
-    if (newPwd.length < 6) {
-      setPwdMsg("Must be at least 6 characters.");
-      return;
-    }
-    try {
-      await sbSet("pwd", newPwd);
-      setCorrectPwd(newPwd);
-      setPwdMsg("Password updated successfully.");
-      setNewPwd("");
-      setConfPwd("");
-    } catch {
-      setPwdMsg("Failed to save — please try again.");
-    }
-  };
-  const uploadBg = async (slot, file) => {
-    if (!file) return;
-    setBgErr("");
-    setBgLoading(true);
-    try {
-      const compressed = await compressImage(file);
-      if (!compressed) {
-        setBgErr("Could not process image.");
-        setBgLoading(false);
-        return;
-      }
-      const next = {
-        ...bgConfig,
-        [slot]: compressed.dataUrl,
-        active: slot
-      };
-      await saveBg(next);
-    } catch {
-      setBgErr("Upload failed.");
-    }
-    setBgLoading(false);
-  };
-  const removeBg = async slot => saveBg({
-    ...bgConfig,
-    [slot]: null,
-    active: bgConfig.active === slot ? null : bgConfig.active
-  });
-  const sendChat = async () => {
-    if (!chatIn.trim() || chatBusy) return;
-    const userMsg = {
-      role: "user",
-      content: chatIn.trim()
-    };
-    const hist = [...(data.chatHistory || []), userMsg];
-    const snap = {
-      ...data,
-      chatHistory: hist
-    };
-    setData(snap);
-    setChatIn("");
-    setChatBusy(true);
-    try {
-      const res = await fetch("https://balmoral-proxy.dafydd-simon-jones.workers.dev", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 1000,
-          system: buildPrompt(data),
-          messages: hist.slice(-10).map(m => ({
-            role: m.role,
-            content: String(m.content || "")
-          }))
-        })
-      });
-      const json = await res.json();
-      if (json.error) {
-        save({
-          ...snap,
-          chatHistory: [...hist, {
-            role: "assistant",
-            content: "API error: " + json.error.message + " (" + json.error.type + ")",
-            changes: []
-          }]
-        });
-        setChatBusy(false);
-        return;
-      }
-      const raw = json.content?.[0]?.text || "No response received.";
-      const m = raw.match(/<ACTIONS>([\s\S]*?)<\/ACTIONS>/);
-      const text = raw.replace(/<ACTIONS>[\s\S]*?<\/ACTIONS>/, "").trim();
-      let next = snap,
-        log = [];
-      if (m) {
-        try {
-          const r = applyActions(snap, JSON.parse(m[1].trim()));
-          next = r.d;
-          log = r.log;
-        } catch {}
-      }
-      save({
-        ...next,
-        chatHistory: [...hist, {
-          role: "assistant",
-          content: text,
-          changes: log
-        }]
-      });
-    } catch (e) {
-      save({
-        ...snap,
-        chatHistory: [...hist, {
-          role: "assistant",
-          content: "Error: " + e.message,
-          changes: []
-        }]
-      });
-    }
-    setChatBusy(false);
-  };
-  const TABS = ["dashboard", "stages", "finances", "todos", "files", "contacts", "notes", "claude", "settings"];
-  const TLBL = {
-    dashboard: "Dashboard",
-    stages: "Stages",
-    finances: "Finances",
-    todos: "To-Dos",
-    files: "Files & Photos",
-    contacts: "Contacts",
-    notes: "Notes",
-    claude: "✦ Ask Claude",
-    settings: "⚙"
-  };
-  return /*#__PURE__*/React.createElement("div", {
-    style: {
-      minHeight: "100vh",
-      color: "#1a2e35",
-      position: "relative"
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      position: "relative",
-      zIndex: 1,
-      minHeight: "100vh",
-      background: "transparent"
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      background: "linear-gradient(135deg,#006d7c 0%,#004f5a 100%)",
-      padding: "1rem 1.25rem",
-      display: "flex",
-      justifyContent: "space-between",
-      alignItems: "center",
-      flexWrap: "wrap",
-      gap: "0.75rem"
-    }
-  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontFamily: "'Playfair Display',serif",
-      fontSize: "clamp(16px,4vw,20px)",
-      fontWeight: "600",
-      color: "#fff"
-    }
-  }, "Balmoral Build Tracker"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: "clamp(10px,2.5vw,12px)",
-      color: "#7ddce8",
-      marginTop: "2px"
-    }
-  }, "32 Grosvenor St \xB7 Brighton Homes \xB7 Oscar 33, Georgia Facade")), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "flex",
-      alignItems: "center",
-      gap: "0.75rem",
-      flexWrap: "wrap"
-    }
-  }, /*#__PURE__*/React.createElement("a", {
-    href: "https://dafyddsimonjones-wq.github.io/balmoral-quotes/",
-    target: "_blank",
-    rel: "noreferrer",
-    style: {
-      fontSize: "12px",
-      color: "#7ddce8",
-      textDecoration: "none",
-      display: "flex",
-      alignItems: "center",
-      gap: "5px",
-      border: "1px solid rgba(255,255,255,0.25)",
-      padding: "5px 12px",
-      borderRadius: "6px"
-    }
-  }, "\uD83D\uDCCA Quote Comparison"), /*#__PURE__*/React.createElement("a", {
-    href: "https://www.brightonhomes.net.au/house-designs/double-storey/oscar",
-    target: "_blank",
-    rel: "noreferrer",
-    style: {
-      fontSize: "12px",
-      color: "#7ddce8",
-      textDecoration: "none",
-      display: "flex",
-      alignItems: "center",
-      gap: "5px",
-      border: "1px solid rgba(255,255,255,0.25)",
-      padding: "5px 12px",
-      borderRadius: "6px"
-    }
-  }, "\uD83C\uDFE0 Oscar 33"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      textAlign: "right",
-      fontSize: "12px",
-      color: "#7ddce8"
-    }
-  }, /*#__PURE__*/React.createElement("div", null, "Contract: ", /*#__PURE__*/React.createElement("strong", {
-    style: {
-      color: "#fff"
-    }
-  }, "$", data.contractPrice.toLocaleString())), /*#__PURE__*/React.createElement("div", null, "Deposit: ", /*#__PURE__*/React.createElement("strong", {
-    style: {
-      color: "#00b9cc"
-    }
-  }, "$3,000 paid 31 Mar 2026"))))), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "flex",
-      background: "rgba(255,255,255,0.88)",
-      backdropFilter: "blur(4px)",
-      borderBottom: "1px solid rgba(232,229,222,0.7)",
-      padding: "0 0.75rem",
-      overflowX: "auto",
-      WebkitOverflowScrolling: "touch"
-    }
-  }, TABS.map(t => /*#__PURE__*/React.createElement("button", {
-    key: t,
-    onClick: () => setTab(t),
-    style: {
-      background: "none",
-      border: "none",
-      padding: "10px 10px",
-      fontSize: "12px",
-      fontWeight: tab === t ? "600" : "400",
-      color: tab === t ? "#006d7c" : "#5a6e7a",
-      borderBottom: tab === t ? "2px solid #006d7c" : "2px solid transparent",
-      cursor: "pointer",
-      whiteSpace: "nowrap",
-      fontFamily: "'Nunito Sans',sans-serif"
-    }
-  }, TLBL[t]))), /*#__PURE__*/React.createElement("div", {
-    style: {
-      padding: "1rem",
-      maxWidth: "960px",
-      margin: "0 auto",
-      minHeight: "calc(100vh - 120px)"
-    }
-  }, tab === "dashboard" && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "flex",
-      gap: "10px",
-      flexWrap: "wrap",
-      marginBottom: "14px"
-    }
-  }, [{
-    l: "Build progress",
-    v: `${progress}%`,
-    s: `${doneStages} of ${data.stages.length} stages`,
-    bar: true
-  }, {
-    l: "Pending actions",
-    v: pendingN,
-    s: `${highN} high priority`,
-    col: highN > 0 ? "#c0392b" : null
-  }, {
-    l: "Paid to date",
-    v: `$${totalPaid.toLocaleString()}`,
-    s: `of $${data.contractPrice.toLocaleString()}`
-  }, {
-    l: "Files uploaded",
-    v: data.files.length,
-    s: `${data.files.filter(f => f.type?.startsWith("image/")).length} photos`
-  }].map((m, i) => /*#__PURE__*/React.createElement("div", {
-    key: i,
-    style: C.met
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: "12px",
-      color: "#7a8e99",
-      marginBottom: "4px"
-    }
-  }, m.l), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: "24px",
-      fontWeight: "600",
-      color: m.col || "#006d7c"
-    }
-  }, m.v), m.bar && /*#__PURE__*/React.createElement("div", {
-    style: {
-      margin: "6px 0 2px",
-      height: "4px",
-      background: "#e8e5de",
-      borderRadius: "2px"
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      width: `${progress}%`,
-      height: "100%",
-      background: "#006d7c",
-      borderRadius: "2px"
-    }
-  })), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: "11px",
-      color: "#8fa3ad",
-      marginTop: "2px"
-    }
-  }, m.s)))), /*#__PURE__*/React.createElement("div", {
-    style: C.card
-  }, /*#__PURE__*/React.createElement("div", {
-    style: C.h
-  }, "Current stage"), data.stages.filter(s => s.status === "active").map(s => /*#__PURE__*/React.createElement("div", {
-    key: s.id,
-    style: {
-      display: "flex",
-      gap: "12px"
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      ...C.dot("active"),
-      marginTop: "2px"
-    }
-  }), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontWeight: "600"
-    }
-  }, s.name), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: "13px",
-      color: "#5a6e7a",
-      marginTop: "2px"
-    }
-  }, s.desc)))), !data.stages.find(s => s.status === "active") && /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: "13px",
-      color: "#7a8e99"
-    }
-  }, "No active stage \u2014 set one in Stages.")), /*#__PURE__*/React.createElement("div", {
-    style: C.card
-  }, /*#__PURE__*/React.createElement("div", {
-    style: C.h
-  }, "Urgent to-dos"), data.todos.filter(t => !t.done && t.priority === "high").slice(0, 6).map(t => /*#__PURE__*/React.createElement("div", {
-    key: t.id,
-    style: C.row
-  }, /*#__PURE__*/React.createElement("input", {
-    type: "checkbox",
-    onChange: () => tickTodo(t.id),
-    style: {
-      marginTop: "3px",
-      accentColor: "#006d7c",
-      cursor: "pointer",
-      flexShrink: 0
-    }
-  }), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", {
-    style: C.tag("#c0392b")
-  }, "High"), /*#__PURE__*/React.createElement("span", {
-    style: C.tag("#5a6e7a")
-  }, t.cat), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: "13px",
-      marginTop: "3px"
-    }
-  }, t.text)))), !data.todos.find(t => !t.done && t.priority === "high") && /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: "13px",
-      color: "#7a8e99"
-    }
-  }, "No urgent items \u2014 nice work.")), /*#__PURE__*/React.createElement("div", {
-    style: C.card
-  }, /*#__PURE__*/React.createElement("div", {
-    style: C.h
-  }, "Risk register"), [["Character Overlay cladding (sides & rear)", "~$18,000 if council requires", "#c0392b"], ["Piering — screw piers worst case", "up to +$12,000", "#d68910"], ["H1 → H2 slab upgrade", "~+$500", "#1e8449"], ["Certainty Pricing", "Not yet available", "#d68910"], ["$50k cashback + pre-rise pricing", "Locked in ✓", "#1e8449"]].map(([l, v, c], i) => /*#__PURE__*/React.createElement("div", {
-    key: i,
-    style: {
-      display: "flex",
-      justifyContent: "space-between",
-      padding: "7px 0",
-      borderBottom: i < 4 ? "1px solid #f0ede6" : "none",
-      gap: "12px",
-      flexWrap: "wrap"
-    }
-  }, /*#__PURE__*/React.createElement("span", {
-    style: {
-      fontSize: "13px"
-    }
-  }, l), /*#__PURE__*/React.createElement("span", {
-    style: {
-      fontSize: "12px",
-      fontWeight: "600",
-      color: c
-    }
-  }, v))))), tab === "stages" && /*#__PURE__*/React.createElement("div", {
-    style: C.card
-  }, /*#__PURE__*/React.createElement("div", {
-    style: C.h
-  }, "Build stages"), data.stages.map((s, i) => /*#__PURE__*/React.createElement("div", {
-    key: s.id,
-    style: {
-      display: "flex",
-      gap: "12px",
-      padding: "10px 0",
-      borderBottom: "1px solid #f0ede6",
-      flexWrap: "wrap"
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: C.dot(s.status)
-  }), /*#__PURE__*/React.createElement("div", {
-    style: {
-      flex: "1 1 160px"
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "flex",
-      gap: "8px",
-      flexWrap: "wrap",
-      alignItems: "center"
-    }
-  }, /*#__PURE__*/React.createElement("span", {
-    style: {
-      fontWeight: "600",
-      fontSize: "14px"
-    }
-  }, i + 1, ". ", s.name), /*#__PURE__*/React.createElement("span", {
-    style: {
-      fontSize: "11px",
-      fontWeight: "500",
-      textTransform: "uppercase",
-      color: s.status === "complete" ? "#1e8449" : s.status === "active" ? "#00b9cc" : "#9ca3af"
-    }
-  }, s.status === "complete" ? "✓ Complete" : s.status === "active" ? "● Active" : "Pending")), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: "12px",
-      color: "#5a6e7a",
-      marginTop: "3px"
-    }
-  }, s.desc), editSt === s.id ? /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "flex",
-      gap: "8px",
-      marginTop: "8px",
-      alignItems: "center",
-      flexWrap: "wrap"
-    }
-  }, /*#__PURE__*/React.createElement("input", {
-    type: "text",
-    placeholder: "e.g. 15 Apr 2026",
-    value: stDate,
-    onChange: e => setStDate(e.target.value),
-    style: {
-      ...C.inp,
-      width: "160px"
-    }
-  }), /*#__PURE__*/React.createElement("button", {
-    style: C.btn("pri"),
-    onClick: () => saveDate(s.id, stDate)
-  }, "Save"), /*#__PURE__*/React.createElement("button", {
-    style: C.btn(),
-    onClick: () => setEditSt(null)
-  }, "Cancel")) : /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: "12px",
-      color: "#8fa3ad",
-      marginTop: "4px",
-      cursor: "pointer"
-    },
-    onClick: () => {
-      setEditSt(s.id);
-      setStDate(s.date);
-    }
-  }, s.date ? `📅 ${s.date}` : "＋ Add date")), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "flex",
-      gap: "6px",
-      flexShrink: 0,
-      alignItems: "flex-start"
-    }
-  }, s.status !== "complete" && /*#__PURE__*/React.createElement("button", {
-    style: C.btn("pri"),
-    onClick: () => markStage(s.id, "complete")
-  }, "Done"), s.status === "complete" && /*#__PURE__*/React.createElement("button", {
-    style: C.btn(),
-    onClick: () => markStage(s.id, "pending")
-  }, "Undo"), s.status === "pending" && /*#__PURE__*/React.createElement("button", {
-    style: {
-      ...C.btn(),
-      background: "#e0f7f4",
-      color: "#006d7c"
-    },
-    onClick: () => markStage(s.id, "active")
-  }, "Set active"))))), tab === "finances" && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "flex",
-      gap: "10px",
-      flexWrap: "wrap",
-      marginBottom: "14px"
-    }
-  }, [["Contract price", `$${data.contractPrice.toLocaleString()}`, "provisional"], ["Paid to date", `$${totalPaid.toLocaleString()}`, null, "#1e8449"], ["Outstanding", `$${(data.contractPrice - totalPaid).toLocaleString()}`]].map(([l, v, s, c], i) => /*#__PURE__*/React.createElement("div", {
-    key: i,
-    style: C.met
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: "12px",
-      color: "#7a8e99",
-      marginBottom: "4px"
-    }
-  }, l), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: "24px",
-      fontWeight: "600",
-      color: c || "#006d7c"
-    }
-  }, v), s && /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: "11px",
-      color: "#8fa3ad"
-    }
-  }, s)))), /*#__PURE__*/React.createElement("div", {
-    style: C.card
-  }, /*#__PURE__*/React.createElement("div", {
-    style: C.h
-  }, "Payment schedule (Schedule 2)"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: "12px",
-      color: "#7a8e99",
-      marginBottom: "12px"
-    }
-  }, "Percentages per Brighton's HIA contract. Amounts calculated once contract price is confirmed."), data.payments.map(p => {
-    const calcAmt = p.amount || (p.pct && p.pct !== "—" ? Math.round(data.contractPrice * parseFloat(p.pct) / 100) : null);
-    return /*#__PURE__*/React.createElement("div", {
-      key: p.id,
-      style: {
-        padding: "10px 0",
-        borderBottom: "1px solid #f0ede6"
-      }
-    }, /*#__PURE__*/React.createElement("div", {
-      style: {
-        display: "flex",
-        justifyContent: "space-between",
-        flexWrap: "wrap",
-        gap: "8px",
-        alignItems: "flex-start"
-      }
-    }, /*#__PURE__*/React.createElement("div", {
-      style: {
-        display: "flex",
-        gap: "10px",
-        alignItems: "flex-start"
-      }
-    }, /*#__PURE__*/React.createElement("input", {
-      type: "checkbox",
-      checked: p.paid,
-      onChange: () => tickPay(p.id),
-      style: {
-        marginTop: "3px",
-        accentColor: "#006d7c",
-        cursor: "pointer",
-        flexShrink: 0
-      }
-    }), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
-      style: {
-        display: "flex",
-        alignItems: "center",
-        gap: "8px",
-        flexWrap: "wrap"
-      }
-    }, /*#__PURE__*/React.createElement("div", {
-      style: {
-        fontWeight: "600",
-        fontSize: "14px",
-        textDecoration: p.paid ? "line-through" : "none",
-        color: p.paid ? "#8fa3ad" : "#1a2e35"
-      }
-    }, p.stage), p.pct && p.pct !== "—" && /*#__PURE__*/React.createElement("div", {
-      style: {
-        fontSize: "11px",
-        fontWeight: "700",
-        color: "#006d7c",
-        background: "#e0f7f4",
-        padding: "2px 7px",
-        borderRadius: "4px"
-      }
-    }, p.pct)), /*#__PURE__*/React.createElement("div", {
-      style: {
-        fontSize: "12px",
-        color: "#7a8e99"
-      }
-    }, "Due: ", p.due), p.note && /*#__PURE__*/React.createElement("div", {
-      style: {
-        fontSize: "11px",
-        color: "#8fa3ad",
-        fontStyle: "italic"
-      }
-    }, p.note), p.paid && p.paidDate && /*#__PURE__*/React.createElement("div", {
-      style: {
-        fontSize: "11px",
-        color: "#1e8449"
-      }
-    }, "\u2713 Paid ", p.paidDate))), /*#__PURE__*/React.createElement("div", {
-      style: {
-        textAlign: "right",
-        flexShrink: 0
-      }
-    }, calcAmt && !p.amount && /*#__PURE__*/React.createElement("div", {
-      style: {
-        fontSize: "11px",
-        color: "#8fa3ad",
-        marginBottom: "3px"
-      }
-    }, "est. $", calcAmt.toLocaleString()), /*#__PURE__*/React.createElement("div", {
-      style: {
-        display: "flex",
-        alignItems: "center",
-        gap: "6px"
-      }
-    }, /*#__PURE__*/React.createElement("span", {
-      style: {
-        fontSize: "12px",
-        color: "#5a6e7a"
-      }
-    }, "$"), /*#__PURE__*/React.createElement("input", {
-      type: "number",
-      placeholder: "TBC",
-      value: p.amount || "",
-      onChange: e => editPay(p.id, e.target.value),
-      style: {
-        ...C.inp,
-        width: "90px",
-        textAlign: "right"
-      }
-    })))));
-  }), /*#__PURE__*/React.createElement("div", {
-    style: {
-      padding: "10px 0",
-      display: "flex",
-      justifyContent: "space-between",
-      alignItems: "center",
-      borderTop: "2px solid #e8e5de",
-      marginTop: "4px"
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontWeight: "600",
-      fontSize: "13px"
-    }
-  }, "Total (Contract Price)"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontWeight: "700",
-      fontSize: "15px",
-      color: "#006d7c"
-    }
-  }, "$", data.contractPrice.toLocaleString()))), /*#__PURE__*/React.createElement("div", {
-    style: {
-      ...C.card,
-      background: "#f0f9ff",
-      borderColor: "#bae6fd"
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: "13px",
-      fontWeight: "600",
-      color: "#0369a1",
-      marginBottom: "8px"
-    }
-  }, "Variable risks not in quoted total"), [["Character Overlay cladding", "~$18,000"], ["Screw piers worst case", "up to +$12,000"], ["H1 → H2 slab upgrade", "~+$500"], ["Butler's pantry (if added)", "$5,380"], ["Under-stairs door (if added)", "$560"]].map(([l, v], i) => /*#__PURE__*/React.createElement("div", {
-    key: i,
-    style: {
-      display: "flex",
-      justifyContent: "space-between",
-      fontSize: "13px",
-      padding: "5px 0",
-      borderBottom: i < 4 ? "1px solid #e0f2fe" : "none"
-    }
-  }, /*#__PURE__*/React.createElement("span", {
-    style: {
-      color: "#0369a1"
-    }
-  }, l), /*#__PURE__*/React.createElement("span", {
-    style: {
-      fontWeight: "600",
-      color: "#0369a1"
-    }
-  }, v))))), tab === "todos" && /*#__PURE__*/React.createElement("div", {
-    style: C.card
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "flex",
-      gap: "6px",
-      marginBottom: "14px",
-      flexWrap: "wrap"
-    }
-  }, TCATS.map(c => /*#__PURE__*/React.createElement("button", {
-    key: c,
-    onClick: () => setTodoCat(c),
-    style: C.pill(todoCat === c)
-  }, c))), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "flex",
-      gap: "8px",
-      marginBottom: "16px",
-      flexWrap: "wrap"
-    }
-  }, /*#__PURE__*/React.createElement("input", {
-    value: newTodo,
-    onChange: e => setNewTodo(e.target.value),
-    onKeyDown: e => e.key === "Enter" && addTodo(),
-    placeholder: "Add a new action\u2026",
-    style: {
-      ...C.inp,
-      flex: "1 1 140px"
-    }
-  }), /*#__PURE__*/React.createElement("select", {
-    value: newPri,
-    onChange: e => setNewPri(e.target.value),
-    style: C.sel
-  }, /*#__PURE__*/React.createElement("option", {
-    value: "high"
-  }, "High"), /*#__PURE__*/React.createElement("option", {
-    value: "medium"
-  }, "Medium"), /*#__PURE__*/React.createElement("option", {
-    value: "low"
-  }, "Low")), /*#__PURE__*/React.createElement("select", {
-    value: newTCat,
-    onChange: e => setNewTCat(e.target.value),
-    style: C.sel
-  }, TCATS.filter(c => c !== "All").map(c => /*#__PURE__*/React.createElement("option", {
-    key: c
-  }, c))), /*#__PURE__*/React.createElement("button", {
-    style: C.btn("pri"),
-    onClick: addTodo
-  }, "Add")), [["high", "#c0392b"], ["medium", "#d68910"], ["low", "#1e8449"]].map(([pri, col]) => {
-    const items = ftodos.filter(t => t.priority === pri && !t.done);
-    if (!items.length) return null;
-    return /*#__PURE__*/React.createElement("div", {
-      key: pri,
-      style: {
-        marginBottom: "14px"
-      }
-    }, /*#__PURE__*/React.createElement("div", {
-      style: {
-        fontSize: "11px",
-        fontWeight: "700",
-        color: col,
-        textTransform: "uppercase",
-        letterSpacing: "0.8px",
-        marginBottom: "8px"
-      }
-    }, pri.charAt(0).toUpperCase() + pri.slice(1), " priority"), items.map(t => /*#__PURE__*/React.createElement("div", {
-      key: t.id,
-      style: C.row
-    }, /*#__PURE__*/React.createElement("input", {
-      type: "checkbox",
-      onChange: () => tickTodo(t.id),
-      style: {
-        marginTop: "3px",
-        accentColor: "#006d7c",
-        cursor: "pointer",
-        flexShrink: 0
-      }
-    }), /*#__PURE__*/React.createElement("div", {
-      style: {
-        flex: 1
-      }
-    }, /*#__PURE__*/React.createElement("span", {
-      style: C.tag("#5a6e7a")
-    }, t.cat), editTodoId === t.id ? /*#__PURE__*/React.createElement("div", {
-      style: {
-        display: "flex",
-        gap: "6px",
-        marginTop: "4px",
-        alignItems: "center"
-      }
-    }, /*#__PURE__*/React.createElement("input", {
-      autoFocus: true,
-      value: editTodoTxt,
-      onChange: e => setEditTodoTxt(e.target.value),
-      onKeyDown: e => {
-        if (e.key === "Enter") saveEditTodo(t.id);
-        if (e.key === "Escape") {
-          setEditTodoId(null);
-        }
-      },
-      style: {
-        ...C.inp,
-        flex: 1,
-        fontSize: "13px",
-        padding: "5px 8px"
-      }
-    }), /*#__PURE__*/React.createElement("button", {
-      onClick: () => saveEditTodo(t.id),
-      style: {
-        ...C.btn("pri"),
-        padding: "5px 10px",
-        fontSize: "12px"
-      }
-    }, "Save"), /*#__PURE__*/React.createElement("button", {
-      onClick: () => setEditTodoId(null),
-      style: {
-        ...C.btn(),
-        padding: "5px 10px",
-        fontSize: "12px"
-      }
-    }, "Cancel")) : /*#__PURE__*/React.createElement("div", {
-      style: {
-        fontSize: "13px",
-        marginTop: "3px",
-        cursor: "pointer"
-      },
-      onClick: () => {
-        setEditTodoId(t.id);
-        setEditTodoText(t.text);
-      },
-      title: "Click to edit"
-    }, t.text)), /*#__PURE__*/React.createElement("button", {
-      onClick: () => delTodo(t.id),
-      style: {
-        background: "none",
-        border: "none",
-        color: "#ccc",
-        cursor: "pointer",
-        fontSize: "18px",
-        flexShrink: 0
-      }
-    }, "\xD7"))));
-  }), ftodos.filter(t => t.done).length > 0 && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: "11px",
-      fontWeight: "700",
-      color: "#8fa3ad",
-      textTransform: "uppercase",
-      letterSpacing: "0.8px",
-      marginBottom: "8px"
-    }
-  }, "Completed"), ftodos.filter(t => t.done).map(t => /*#__PURE__*/React.createElement("div", {
-    key: t.id,
-    style: {
-      ...C.row,
-      opacity: 0.55
-    }
-  }, /*#__PURE__*/React.createElement("input", {
-    type: "checkbox",
-    checked: true,
-    onChange: () => tickTodo(t.id),
-    style: {
-      marginTop: "3px",
-      accentColor: "#006d7c",
-      cursor: "pointer",
-      flexShrink: 0
-    }
-  }), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: "13px",
-      textDecoration: "line-through",
-      color: "#8fa3ad",
-      flex: 1
-    }
-  }, t.text), /*#__PURE__*/React.createElement("button", {
-    onClick: () => delTodo(t.id),
-    style: {
-      background: "none",
-      border: "none",
-      color: "#ccc",
-      cursor: "pointer",
-      fontSize: "18px",
-      flexShrink: 0
-    }
-  }, "\xD7"))))), tab === "files" && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
-    onDragOver: e => {
-      e.preventDefault();
-      setDragOver(true);
-    },
-    onDragLeave: () => setDragOver(false),
-    onDrop: e => {
-      e.preventDefault();
-      setDragOver(false);
-      uploadFiles(e.dataTransfer.files);
-    },
-    onClick: () => fileRef.current?.click(),
-    style: {
-      border: `2px dashed ${dragOver ? "#006d7c" : "#c8c3ba"}`,
-      borderRadius: "12px",
-      padding: "2rem",
-      textAlign: "center",
-      cursor: "pointer",
-      background: dragOver ? "#f0f9ff" : "#faf9f7",
-      marginBottom: "12px"
-    }
-  }, /*#__PURE__*/React.createElement("input", {
-    ref: fileRef,
-    type: "file",
-    multiple: true,
-    accept: "image/*,.pdf,.doc,.docx,.xls,.xlsx",
-    style: {
-      display: "none"
-    },
-    onChange: e => uploadFiles(e.target.files)
-  }), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: "32px",
-      marginBottom: "8px"
-    }
-  }, uploading ? "⏳" : "＋"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontWeight: "600",
-      color: "#006d7c",
-      marginBottom: "4px"
-    }
-  }, uploading ? "Uploading…" : "Drop files here or click to upload"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: "12px",
-      color: "#7a8e99"
-    }
-  }, "Photos, PDFs, quotes, plans, council docs \xB7 Images compressed automatically \xB7 Max 3.5MB for documents"), upErr && /*#__PURE__*/React.createElement("div", {
-    style: {
-      marginTop: "8px",
-      fontSize: "12px",
-      color: "#c0392b"
-    }
-  }, upErr)), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "flex",
-      gap: "6px",
-      marginBottom: "14px",
-      flexWrap: "wrap"
-    }
-  }, FCATS.map(c => /*#__PURE__*/React.createElement("button", {
-    key: c,
-    onClick: () => setFileCat(c),
-    style: C.pill(fileCat === c)
-  }, c))), data.files.length === 0 && /*#__PURE__*/React.createElement("div", {
-    style: {
-      ...C.card,
-      color: "#8fa3ad",
-      fontSize: "13px",
-      textAlign: "center",
-      padding: "2rem"
-    }
-  }, "No files uploaded yet."), imgFiles.length > 0 && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: "11px",
-      fontWeight: "600",
-      color: "#5a6e7a",
-      marginBottom: "10px",
-      textTransform: "uppercase",
-      letterSpacing: "0.6px"
-    }
-  }, "Photos (", imgFiles.length, ")"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "grid",
-      gridTemplateColumns: "repeat(auto-fill, minmax(120px,1fr))",
-      gap: "10px",
-      marginBottom: "16px"
-    }
-  }, imgFiles.map(f => /*#__PURE__*/React.createElement("div", {
-    key: f.id,
-    style: {
-      borderRadius: "10px",
-      overflow: "hidden",
-      border: "1px solid #e8e5de",
-      cursor: "pointer",
-      position: "relative"
-    },
-    onClick: () => openPreview(f)
-  }, /*#__PURE__*/React.createElement(Thumb, {
-    id: f.id
-  }), /*#__PURE__*/React.createElement("div", {
-    style: {
-      padding: "6px 8px"
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: "11px",
-      fontWeight: "500",
-      overflow: "hidden",
-      textOverflow: "ellipsis",
-      whiteSpace: "nowrap"
-    }
-  }, f.name), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: "10px",
-      color: "#8fa3ad"
-    }
-  }, f.uploadedAt)), /*#__PURE__*/React.createElement("button", {
-    onClick: e => {
-      e.stopPropagation();
-      delFile(f.id);
-    },
-    style: {
-      position: "absolute",
-      top: "4px",
-      right: "4px",
-      background: "rgba(0,0,0,0.55)",
-      border: "none",
-      borderRadius: "50%",
-      width: "22px",
-      height: "22px",
-      color: "#fff",
-      cursor: "pointer",
-      fontSize: "13px",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center"
-    }
-  }, "\xD7"))))), docFiles.length > 0 && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: "11px",
-      fontWeight: "600",
-      color: "#5a6e7a",
-      marginBottom: "10px",
-      textTransform: "uppercase",
-      letterSpacing: "0.6px"
-    }
-  }, "Documents (", docFiles.length, ")"), /*#__PURE__*/React.createElement("div", {
-    style: C.card
-  }, docFiles.map((f, i) => /*#__PURE__*/React.createElement("div", {
-    key: f.id,
-    style: {
-      display: "flex",
-      gap: "12px",
-      alignItems: "center",
-      padding: "10px 0",
-      borderBottom: i < docFiles.length - 1 ? "1px solid #f0ede6" : "none"
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      width: "36px",
-      height: "36px",
-      borderRadius: "8px",
-      background: f.type === "application/pdf" ? "#fee2e2" : "#e0f2fe",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      fontSize: "18px",
-      flexShrink: 0
-    }
-  }, f.type === "application/pdf" ? "📄" : "📋"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      flex: 1,
-      minWidth: 0
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontWeight: "500",
-      fontSize: "13px",
-      overflow: "hidden",
-      textOverflow: "ellipsis",
-      whiteSpace: "nowrap"
-    }
-  }, f.name), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: "11px",
-      color: "#7a8e99"
-    }
-  }, f.cat, " \xB7 ", Math.round((f.size || 0) / 1024), "KB \xB7 ", f.uploadedAt)), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "flex",
-      gap: "6px",
-      flexShrink: 0
-    }
-  }, /*#__PURE__*/React.createElement("button", {
-    style: C.btn(),
-    onClick: () => openPreview(f)
-  }, "View"), /*#__PURE__*/React.createElement("button", {
-    style: C.btn("red"),
-    onClick: () => delFile(f.id)
-  }, "Delete"))))))), tab === "contacts" && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "grid",
-      gridTemplateColumns: "repeat(auto-fill, minmax(200px,1fr))",
-      gap: "12px",
-      marginBottom: "12px"
-    }
-  }, data.contacts.map(c => /*#__PURE__*/React.createElement("div", {
-    key: c.id,
-    style: {
-      ...C.card,
-      marginBottom: 0
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      width: "36px",
-      height: "36px",
-      borderRadius: "50%",
-      background: "linear-gradient(135deg,#006d7c,#004f5a)",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      color: "#fff",
-      fontWeight: "600",
-      fontSize: "13px",
-      marginBottom: "10px"
-    }
-  }, c.name.split(" ").map(w => w[0]).slice(0, 2).join("")), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontWeight: "600"
-    }
-  }, c.name), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: "12px",
-      color: "#00b9cc",
-      fontWeight: "500",
-      marginTop: "2px"
-    }
-  }, c.role), c.company && /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: "12px",
-      color: "#7a8e99"
-    }
-  }, c.company), /*#__PURE__*/React.createElement("div", {
-    style: {
-      marginTop: "10px",
-      display: "flex",
-      flexDirection: "column",
-      gap: "4px"
-    }
-  }, c.phone && /*#__PURE__*/React.createElement("a", {
-    href: `tel:${c.phone}`,
-    style: {
-      fontSize: "13px",
-      color: "#006d7c",
-      textDecoration: "none"
-    }
-  }, "\uD83D\uDCDE ", c.phone), c.email && /*#__PURE__*/React.createElement("a", {
-    href: `mailto:${c.email}`,
-    style: {
-      fontSize: "13px",
-      color: "#006d7c",
-      textDecoration: "none",
-      wordBreak: "break-all"
-    }
-  }, "\u2709 ", c.email))))), showCon ? /*#__PURE__*/React.createElement("div", {
-    style: C.card
-  }, /*#__PURE__*/React.createElement("div", {
-    style: C.h
-  }, "Add contact"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "grid",
-      gridTemplateColumns: "repeat(auto-fill, minmax(140px,1fr))",
-      gap: "10px",
-      marginBottom: "12px"
-    }
-  }, [["name", "Name *"], ["role", "Role"], ["company", "Company"], ["phone", "Phone"], ["email", "Email"]].map(([f, l]) => /*#__PURE__*/React.createElement("input", {
-    key: f,
-    placeholder: l,
-    value: newCon[f],
-    onChange: e => setNewCon(p => ({
-      ...p,
-      [f]: e.target.value
-    })),
-    style: C.inp
-  }))), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "flex",
-      gap: "8px"
-    }
-  }, /*#__PURE__*/React.createElement("button", {
-    style: C.btn("pri"),
-    onClick: addCon
-  }, "Save"), /*#__PURE__*/React.createElement("button", {
-    style: C.btn(),
-    onClick: () => setShowCon(false)
-  }, "Cancel"))) : /*#__PURE__*/React.createElement("button", {
-    style: C.btn("pri"),
-    onClick: () => setShowCon(true)
-  }, "\uFF0B Add contact")), tab === "notes" && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
-    style: C.card
-  }, /*#__PURE__*/React.createElement("textarea", {
-    value: newNote,
-    onChange: e => setNewNote(e.target.value),
-    placeholder: "Add a note \u2014 conversations with June, decisions made, things to remember\u2026",
-    rows: 4,
-    style: {
-      ...C.inp,
-      resize: "vertical",
-      marginBottom: "10px"
-    }
-  }), /*#__PURE__*/React.createElement("button", {
-    style: C.btn("pri"),
-    onClick: addNote
-  }, "Save note")), data.notes.length === 0 && /*#__PURE__*/React.createElement("div", {
-    style: {
-      ...C.card,
-      color: "#8fa3ad",
-      fontSize: "13px"
-    }
-  }, "No notes yet."), [...data.notes].reverse().map(n => /*#__PURE__*/React.createElement("div", {
-    key: n.id,
-    style: C.card
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "flex",
-      justifyContent: "space-between",
-      alignItems: "flex-start"
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: "13px",
-      lineHeight: "1.6",
-      flex: 1,
-      whiteSpace: "pre-wrap"
-    }
-  }, n.text), /*#__PURE__*/React.createElement("button", {
-    onClick: () => delNote(n.id),
-    style: {
-      background: "none",
-      border: "none",
-      color: "#ccc",
-      cursor: "pointer",
-      fontSize: "18px",
-      marginLeft: "12px",
-      flexShrink: 0
-    }
-  }, "\xD7")), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: "11px",
-      color: "#8fa3ad",
-      marginTop: "8px"
-    }
-  }, n.date)))), tab === "claude" && /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "flex",
-      flexDirection: "column",
-      height: "calc(100vh - 170px)",
-      minHeight: "500px"
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      ...C.card,
-      background: "#f0f9ff",
-      borderColor: "#bae6fd",
-      marginBottom: "10px",
-      padding: "0.75rem 1.25rem",
-      flexShrink: 0
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: "12px",
-      color: "#0369a1",
-      lineHeight: "1.6"
-    }
-  }, /*#__PURE__*/React.createElement("strong", null, "Claude knows your entire build."), " Ask questions or request changes \u2014 \"add a to-do to call June about cladding\", \"mark site inspection complete\", \"what are my urgent actions?\"")), /*#__PURE__*/React.createElement("div", {
-    style: {
-      flex: 1,
-      overflowY: "auto",
-      display: "flex",
-      flexDirection: "column",
-      gap: "12px",
-      padding: "4px 0",
-      marginBottom: "12px"
-    }
-  }, (!data.chatHistory || data.chatHistory.length === 0) && /*#__PURE__*/React.createElement("div", {
-    style: {
-      textAlign: "center",
-      padding: "3rem 2rem",
-      color: "#8fa3ad"
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: "32px",
-      marginBottom: "12px"
-    }
-  }, "\u2726"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontFamily: "'Playfair Display',serif",
-      fontSize: "18px",
-      color: "#5a6e7a",
-      marginBottom: "10px"
-    }
-  }, "How can I help with the build?"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: "13px",
-      lineHeight: "1.9",
-      color: "#7a8e99"
-    }
-  }, "\"What are my urgent to-dos?\"", /*#__PURE__*/React.createElement("br", null), "\"Mark the site inspection as complete\"", /*#__PURE__*/React.createElement("br", null), "\"What are the key risks right now?\"")), (data.chatHistory || []).map((msg, i) => /*#__PURE__*/React.createElement("div", {
-    key: i,
-    style: {
-      display: "flex",
-      justifyContent: msg.role === "user" ? "flex-end" : "flex-start"
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      maxWidth: "80%",
-      padding: "10px 14px",
-      borderRadius: msg.role === "user" ? "16px 16px 4px 16px" : "16px 16px 16px 4px",
-      background: msg.role === "user" ? "#006d7c" : "#fff",
-      color: msg.role === "user" ? "#fff" : "#1a2e35",
-      fontSize: "13px",
-      lineHeight: "1.6",
-      border: msg.role === "assistant" ? "1px solid #e8e5de" : "none",
-      whiteSpace: "pre-wrap"
-    }
-  }, msg.content, msg.changes?.length > 0 && /*#__PURE__*/React.createElement("div", {
-    style: {
-      marginTop: "10px",
-      padding: "8px 10px",
-      background: "#f0f9ff",
-      borderRadius: "8px",
-      border: "1px solid #bae6fd"
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: "11px",
-      fontWeight: "600",
-      color: "#0369a1",
-      marginBottom: "4px",
-      textTransform: "uppercase",
-      letterSpacing: "0.5px"
-    }
-  }, "Changes made"), msg.changes.map((c, ci) => /*#__PURE__*/React.createElement("div", {
-    key: ci,
-    style: {
-      fontSize: "12px",
-      color: "#0369a1"
-    }
-  }, "\u2713 ", c)))))), chatBusy && /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "flex"
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      padding: "12px 16px",
-      borderRadius: "16px 16px 16px 4px",
-      background: "#fff",
-      border: "1px solid #e8e5de"
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "flex",
-      gap: "5px",
-      alignItems: "center"
-    }
-  }, [0, 1, 2].map(i => /*#__PURE__*/React.createElement("div", {
-    key: i,
-    style: {
-      width: "7px",
-      height: "7px",
-      borderRadius: "50%",
-      background: "#00b9cc",
-      animation: `bounce 1.2s ease-in-out ${i * 0.15}s infinite`
-    }
-  }))))), /*#__PURE__*/React.createElement("div", {
-    ref: chatEnd
-  })), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "flex",
-      gap: "8px",
-      alignItems: "flex-end",
-      flexShrink: 0
-    }
-  }, /*#__PURE__*/React.createElement("textarea", {
-    value: chatIn,
-    onChange: e => setChatIn(e.target.value),
-    onKeyDown: e => {
-      if (e.key === "Enter" && !e.shiftKey) {
-        e.preventDefault();
-        sendChat();
-      }
-    },
-    placeholder: "Message Claude\u2026 (Enter to send, Shift+Enter for new line)",
-    rows: 2,
-    style: {
-      ...C.inp,
-      flex: 1,
-      resize: "none"
-    }
-  }), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "flex",
-      flexDirection: "column",
-      gap: "6px"
-    }
-  }, /*#__PURE__*/React.createElement("button", {
-    style: {
-      ...C.btn("pri"),
-      padding: "10px 18px"
-    },
-    onClick: sendChat,
-    disabled: chatBusy
-  }, chatBusy ? "…" : "Send"), data.chatHistory?.length > 0 && /*#__PURE__*/React.createElement("button", {
-    style: {
-      ...C.btn(),
-      fontSize: "11px",
-      padding: "5px 10px"
-    },
-    onClick: () => save({
-      ...data,
-      chatHistory: []
-    })
-  }, "Clear")))), tab === "settings" && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
-    style: C.card
-  }, /*#__PURE__*/React.createElement("div", {
-    style: C.h
-  }, "Background image"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: "13px",
-      color: "#5a6e7a",
-      marginBottom: "16px"
-    }
-  }, "Upload up to two background images and switch between them. A soft overlay keeps everything readable."), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "grid",
-      gridTemplateColumns: "repeat(auto-fill, minmax(140px,1fr))",
-      gap: "12px",
-      marginBottom: "12px"
-    }
-  }, ["slot1", "slot2"].map((slot, i) => /*#__PURE__*/React.createElement("div", {
-    key: slot,
-    style: {
-      border: `2px solid ${bgConfig.active === slot ? "#006d7c" : "#e8e5de"}`,
-      borderRadius: "12px",
-      overflow: "hidden",
-      background: "#faf9f7"
-    }
-  }, bgConfig[slot] ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
-    style: {
-      position: "relative",
-      height: "140px"
-    }
-  }, /*#__PURE__*/React.createElement("img", {
-    src: bgConfig[slot],
-    alt: "",
-    style: {
-      width: "100%",
-      height: "100%",
-      objectFit: "cover",
-      display: "block"
-    }
-  }), bgConfig.active === slot && /*#__PURE__*/React.createElement("div", {
-    style: {
-      position: "absolute",
-      top: "8px",
-      left: "8px",
-      background: "#006d7c",
-      color: "#fff",
-      fontSize: "10px",
-      fontWeight: "700",
-      padding: "3px 8px",
-      borderRadius: "4px",
-      textTransform: "uppercase",
-      letterSpacing: "0.5px"
-    }
-  }, "Active")), /*#__PURE__*/React.createElement("div", {
-    style: {
-      padding: "10px 12px",
-      display: "flex",
-      gap: "8px",
-      flexWrap: "wrap"
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: "12px",
-      color: "#5a6e7a",
-      flex: 1,
-      alignSelf: "center"
-    }
-  }, "Image ", i + 1), bgConfig.active !== slot && /*#__PURE__*/React.createElement("button", {
-    style: {
-      ...C.btn("pri"),
-      fontSize: "11px",
-      padding: "5px 12px"
-    },
-    onClick: () => saveBg({
-      ...bgConfig,
-      active: slot
-    })
-  }, "Use this"), bgConfig.active === slot && /*#__PURE__*/React.createElement("button", {
-    style: {
-      ...C.btn(),
-      fontSize: "11px",
-      padding: "5px 12px"
-    },
-    onClick: () => saveBg({
-      ...bgConfig,
-      active: null
-    })
-  }, "Deactivate"), /*#__PURE__*/React.createElement("button", {
-    style: {
-      ...C.btn("red"),
-      fontSize: "11px",
-      padding: "5px 12px"
-    },
-    onClick: () => removeBg(slot)
-  }, "Remove"))) : /*#__PURE__*/React.createElement("div", {
-    onClick: () => (slot === "slot1" ? bgRef1 : bgRef2).current?.click(),
-    style: {
-      height: "180px",
-      display: "flex",
-      flexDirection: "column",
-      alignItems: "center",
-      justifyContent: "center",
-      cursor: "pointer",
-      gap: "8px",
-      padding: "1rem"
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: "28px",
-      opacity: 0.4
-    }
-  }, "\uFF0B"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: "12px",
-      color: "#7a8e99",
-      textAlign: "center"
-    }
-  }, "Upload image ", i + 1), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: "11px",
-      color: "#8fa3ad",
-      textAlign: "center"
-    }
-  }, "JPG or PNG \xB7 auto-compressed")), /*#__PURE__*/React.createElement("input", {
-    ref: slot === "slot1" ? bgRef1 : bgRef2,
-    type: "file",
-    accept: "image/*",
-    style: {
-      display: "none"
-    },
-    onChange: e => {
-      if (e.target.files[0]) uploadBg(slot, e.target.files[0]);
-      e.target.value = "";
-    }
-  })))), bgLoading && /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: "12px",
-      color: "#5a6e7a"
-    }
-  }, "Uploading\u2026"), bgErr && /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: "12px",
-      color: "#c0392b"
-    }
-  }, bgErr)), /*#__PURE__*/React.createElement("div", {
-    style: C.card
-  }, /*#__PURE__*/React.createElement("div", {
-    style: C.h
-  }, "Change password"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: "13px",
-      color: "#5a6e7a",
-      marginBottom: "14px"
-    }
-  }, "Default is ", /*#__PURE__*/React.createElement("code", {
-    style: {
-      background: "#f5f4f0",
-      padding: "2px 6px",
-      borderRadius: "4px",
-      fontSize: "12px"
-    }
-  }, "balmoral2026"), ". Share with anyone who needs access."), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "flex",
-      flexDirection: "column",
-      gap: "10px",
-      maxWidth: "320px"
-    }
-  }, /*#__PURE__*/React.createElement("input", {
-    type: "password",
-    placeholder: "New password (min 6 characters)",
-    value: newPwd,
-    onChange: e => setNewPwd(e.target.value),
-    style: C.inp
-  }), /*#__PURE__*/React.createElement("input", {
-    type: "password",
-    placeholder: "Confirm new password",
-    value: confPwd,
-    onChange: e => setConfPwd(e.target.value),
-    onKeyDown: e => e.key === "Enter" && changePwd(),
-    style: C.inp
-  }), /*#__PURE__*/React.createElement("button", {
-    style: C.btn("pri"),
-    onClick: changePwd
-  }, "Update password"), pwdMsg && /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: "13px",
-      color: pwdMsg.includes("success") ? "#1e8449" : "#c0392b"
-    }
-  }, pwdMsg))), /*#__PURE__*/React.createElement("div", {
-    style: C.card
-  }, /*#__PURE__*/React.createElement("div", {
-    style: C.h
-  }, "About"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: "13px",
-      color: "#5a6e7a",
-      lineHeight: "1.9"
-    }
-  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("strong", {
-    style: {
-      color: "#1a2e35"
-    }
-  }, "Property:"), " 32 Grosvenor St, Balmoral QLD 4171"), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("strong", {
-    style: {
-      color: "#1a2e35"
-    }
-  }, "Builder:"), " Brighton Homes (MJH Group)"), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("strong", {
-    style: {
-      color: "#1a2e35"
-    }
-  }, "Design:"), " Oscar 33, Georgia Facade"), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("strong", {
-    style: {
-      color: "#1a2e35"
-    }
-  }, "Consultant:"), " June Matthews \xB7 0418 165 126"), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("strong", {
-    style: {
-      color: "#1a2e35"
-    }
-  }, "Quote:"), " #766947 \xB7 $602,840 provisional"), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("strong", {
-    style: {
-      color: "#1a2e35"
-    }
-  }, "Deposit:"), " $3,000 paid 31 Mar 2026 (refundable until CT)"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      marginTop: "12px",
-      padding: "10px 12px",
-      background: "#f5f4f0",
-      borderRadius: "8px",
-      fontSize: "12px",
-      color: "#7a8e99",
-      lineHeight: "1.6"
-    }
-  }, "Data stored in Supabase \u2014 all users with the password see the same information in real time across all devices.")))))), preview && /*#__PURE__*/React.createElement(Preview, {
-    file: preview.file,
-    src: preview.src,
-    onClose: () => setPreview(null)
-  }));
+// Apply background to body - must be before early returns (rules of hooks)
+// Apply background via fixed pseudo-element - consistent across all tabs
+useEffect(() => {
+const url = bgConfig.active ? bgConfig[bgConfig.active] : null;
+let el = document.getElementById(‘bg-style’);
+if (!el) {
+el = document.createElement(‘style’);
+el.id = ‘bg-style’;
+document.head.appendChild(el);
+}
+if (url) {
+el.textContent = ‘html,body{height:100%;margin:0}body::before{content:””;position:fixed;top:0;left:0;width:100%;height:100%;background-image:url(”’ + url + ‘”);background-size:cover;background-position:center;background-repeat:no-repeat;z-index:-1;}’;
+document.body.style.background = ‘transparent’;
+} else {
+el.textContent = ‘’;
+document.body.style.background = ‘#f5f4f0’;
+}
+return () => {
+if (el) el.textContent = ‘’;
+};
+}, [bgConfig]);
+if (!authed) return /*#**PURE***/React.createElement(Login, {
+onAuth: () => setAuthed(true),
+correctPwd: correctPwd
+});
+if (loading || !data) return /*#**PURE***/React.createElement(“div”, {
+style: {
+minHeight: “100vh”,
+display: “flex”,
+flexDirection: “column”,
+alignItems: “center”,
+justifyContent: “center”,
+gap: “16px”,
+background: “#f5f4f0”,
+color: “#5a6e7a”,
+fontSize: “14px”
+}
+}, /*#**PURE***/React.createElement(“div”, {
+className: “spinner”
+}), “Loading Balmoral Build Tracker\u2026”);
+const doneStages = data.stages.filter(s => s.status === “complete”).length;
+const progress = Math.round(doneStages / data.stages.length * 100);
+const pendingN = data.todos.filter(t => !t.done).length;
+const highN = data.todos.filter(t => !t.done && t.priority === “high”).length;
+const totalPaid = data.payments.filter(p => p.paid).reduce((s, p) => s + (p.amount || 0), 0);
+const ftodos = todoCat === “All” ? data.todos : data.todos.filter(t => t.cat === todoCat);
+const ffiles = fileCat === “All” ? data.files : data.files.filter(f => f.cat === fileCat);
+const imgFiles = ffiles.filter(f => f.type?.startsWith(“image/”));
+const docFiles = ffiles.filter(f => !f.type?.startsWith(“image/”));
+const activeBgUrl = bgConfig.active ? bgConfig[bgConfig.active] : null;
+const markStage = (id, status) => save({
+…data,
+stages: data.stages.map(s => s.id === id ? {
+…s,
+status
+} : s)
+});
+const saveDate = (id, date) => {
+save({
+…data,
+stages: data.stages.map(s => s.id === id ? {
+…s,
+date
+} : s)
+});
+setEditSt(null);
+};
+const tickTodo = id => save({
+…data,
+todos: data.todos.map(t => t.id === id ? {
+…t,
+done: !t.done
+} : t)
+});
+const delTodo = id => save({
+…data,
+todos: data.todos.filter(t => t.id !== id)
+});
+const addTodo = () => {
+if (!newTodo.trim()) return;
+save({
+…data,
+todos: […data.todos, {
+id: Date.now(),
+text: newTodo.trim(),
+priority: newPri,
+done: false,
+cat: newTCat
+}]
+});
+setNewTodo(””);
+};
+const saveEditTodo = id => {
+if (!editTodoTxt.trim()) return;
+save({
+…data,
+todos: data.todos.map(t => t.id === id ? {
+…t,
+text: editTodoTxt.trim()
+} : t)
+});
+setEditTodoId(null);
+};
+const saveTodoEdit = id => {
+if (!editTodoText.trim()) return;
+save({
+…data,
+todos: data.todos.map(t => t.id === id ? {
+…t,
+text: editTodoText.trim()
+} : t)
+});
+setEditTodoId(null);
+;
+};
+const addNote = () => {
+if (!newNote.trim()) return;
+save({
+…data,
+notes: […data.notes, {
+id: Date.now(),
+text: newNote.trim(),
+date: today()
+}]
+});
+setNewNote(””);
+};
+const delNote = id => save({
+…data,
+notes: data.notes.filter(n => n.id !== id)
+});
+const addCon = () => {
+if (!newCon.name.trim()) return;
+save({
+…data,
+contacts: […data.contacts, {
+…newCon,
+id: Date.now()
+}]
+});
+setNewCon({
+name: “”,
+role: “”,
+company: “”,
+phone: “”,
+email: “”
+});
+setShowCon(false);
+};
+const tickPay = id => save({
+…data,
+payments: data.payments.map(p => p.id === id ? {
+…p,
+paid: !p.paid,
+paidDate: !p.paid ? today() : “”
+} : p)
+});
+const editPay = (id, v) => save({
+…data,
+payments: data.payments.map(p => p.id === id ? {
+…p,
+amount: v ? parseFloat(v) : null
+} : p)
+});
+const openPreview = async file => {
+const src = await sbGetFile(String(file.id));
+setPreview({
+file,
+src
+});
+};
+const delFile = async id => {
+if (!confirm(“Delete this file?”)) return;
+try {
+await sbDelFile(String(id));
+} catch {}
+save({
+…data,
+files: data.files.filter(f => f.id !== id)
+});
+};
+const uploadFiles = async list => {
+setUpErr(””);
+setUploading(true);
+let cur = {
+…data
+};
+for (const file of Array.from(list)) {
+try {
+let blob, size;
+if (file.type.startsWith(“image/”)) {
+// Compress image then convert dataUrl back to blob for upload
+const c = await compressImage(file);
+if (!c) {
+setUpErr(`Could not process "${file.name}"`);
+continue;
+}
+const res = await fetch(c.dataUrl);
+blob = await res.blob();
+size = c.size;
+} else {
+if (file.size > MAX_BYTES) {
+setUpErr(`"${file.name}" too large (max 3.5MB)`);
+continue;
+}
+blob = file;
+size = file.size;
+}
+const id = String(Date.now()) + “-” + String(Math.floor(Math.random() * 100000));
+const meta = {
+name: file.name,
+type: file.type,
+cat: fileCat === “All” ? “Other” : fileCat,
+size,
+uploadedAt: today()
+};
+await sbSetFile(String(id), meta, blob);
+cur = {
+…cur,
+files: […cur.files, {
+id: String(id),
+…meta
+}]
+};
+await save(cur);
+} catch (e) {
+setUpErr(`Failed to upload "${file.name}" — ${e.message}`);
+}
+}
+setUploading(false);
+};
+const changePwd = async () => {
+if (!newPwd || newPwd !== confPwd) {
+setPwdMsg(“Passwords don’t match.”);
+return;
+}
+if (newPwd.length < 6) {
+setPwdMsg(“Must be at least 6 characters.”);
+return;
+}
+try {
+await sbSet(“pwd”, newPwd);
+setCorrectPwd(newPwd);
+setPwdMsg(“Password updated successfully.”);
+setNewPwd(””);
+setConfPwd(””);
+} catch {
+setPwdMsg(“Failed to save — please try again.”);
+}
+};
+const uploadBg = async (slot, file) => {
+if (!file) return;
+setBgErr(””);
+setBgLoading(true);
+try {
+const compressed = await compressImage(file);
+if (!compressed) {
+setBgErr(“Could not process image.”);
+setBgLoading(false);
+return;
+}
+const next = {
+…bgConfig,
+[slot]: compressed.dataUrl,
+active: slot
+};
+await saveBg(next);
+} catch {
+setBgErr(“Upload failed.”);
+}
+setBgLoading(false);
+};
+const removeBg = async slot => saveBg({
+…bgConfig,
+[slot]: null,
+active: bgConfig.active === slot ? null : bgConfig.active
+});
+const sendChat = async () => {
+if (!chatIn.trim() || chatBusy) return;
+const userMsg = {
+role: “user”,
+content: chatIn.trim()
+};
+const hist = […(data.chatHistory || []), userMsg];
+const snap = {
+…data,
+chatHistory: hist
+};
+setData(snap);
+setChatIn(””);
+setChatBusy(true);
+try {
+const res = await fetch(“https://balmoral-proxy.dafydd-simon-jones.workers.dev”, {
+method: “POST”,
+headers: {
+“Content-Type”: “application/json”
+},
+body: JSON.stringify({
+model: “claude-sonnet-4-20250514”,
+max_tokens: 1000,
+system: buildPrompt(data),
+messages: hist.slice(-10).map(m => ({
+role: m.role,
+content: String(m.content || “”)
+}))
+})
+});
+const json = await res.json();
+if (json.error) {
+save({
+…snap,
+chatHistory: […hist, {
+role: “assistant”,
+content: “API error: “ + json.error.message + “ (” + json.error.type + “)”,
+changes: []
+}]
+});
+setChatBusy(false);
+return;
+}
+const raw = json.content?.[0]?.text || “No response received.”;
+const m = raw.match(/<ACTIONS>([\s\S]*?)</ACTIONS>/);
+const text = raw.replace(/<ACTIONS>[\s\S]*?</ACTIONS>/, “”).trim();
+let next = snap,
+log = [];
+if (m) {
+try {
+const r = applyActions(snap, JSON.parse(m[1].trim()));
+next = r.d;
+log = r.log;
+} catch {}
+}
+save({
+…next,
+chatHistory: […hist, {
+role: “assistant”,
+content: text,
+changes: log
+}]
+});
+} catch (e) {
+save({
+…snap,
+chatHistory: […hist, {
+role: “assistant”,
+content: “Error: “ + e.message,
+changes: []
+}]
+});
+}
+setChatBusy(false);
+};
+const TABS = [“dashboard”, “stages”, “finances”, “todos”, “files”, “contacts”, “notes”, “claude”, “settings”];
+const TLBL = {
+dashboard: “Dashboard”,
+stages: “Stages”,
+finances: “Finances”,
+todos: “To-Dos”,
+files: “Files & Photos”,
+contacts: “Contacts”,
+notes: “Notes”,
+claude: “✦ Ask Claude”,
+settings: “⚙”
+};
+return /*#**PURE***/React.createElement(“div”, {
+style: {
+minHeight: “100vh”,
+color: “#1a2e35”,
+position: “relative”
+}
+}, /*#**PURE***/React.createElement(“div”, {
+style: {
+position: “relative”,
+zIndex: 1,
+minHeight: “100vh”,
+background: “transparent”
+}
+}, /*#**PURE***/React.createElement(“div”, {
+style: {
+background: “linear-gradient(135deg,#006d7c 0%,#004f5a 100%)”,
+padding: “1rem 1.25rem”,
+display: “flex”,
+justifyContent: “space-between”,
+alignItems: “center”,
+flexWrap: “wrap”,
+gap: “0.75rem”
+}
+}, /*#**PURE***/React.createElement(“div”, null, /*#**PURE***/React.createElement(“div”, {
+style: {
+fontFamily: “‘Playfair Display’,serif”,
+fontSize: “clamp(16px,4vw,20px)”,
+fontWeight: “600”,
+color: “#fff”
+}
+}, “Balmoral Build Tracker”), /*#**PURE***/React.createElement(“div”, {
+style: {
+fontSize: “clamp(10px,2.5vw,12px)”,
+color: “#7ddce8”,
+marginTop: “2px”
+}
+}, “32 Grosvenor St \xB7 Brighton Homes \xB7 Oscar 33, Georgia Facade”)), /*#**PURE***/React.createElement(“div”, {
+style: {
+display: “flex”,
+alignItems: “center”,
+gap: “0.75rem”,
+flexWrap: “wrap”
+}
+}, /*#**PURE***/React.createElement(“a”, {
+href: “https://dafyddsimonjones-wq.github.io/balmoral-quotes/”,
+target: “_blank”,
+rel: “noreferrer”,
+style: {
+fontSize: “12px”,
+color: “#7ddce8”,
+textDecoration: “none”,
+display: “flex”,
+alignItems: “center”,
+gap: “5px”,
+border: “1px solid rgba(255,255,255,0.25)”,
+padding: “5px 12px”,
+borderRadius: “6px”
+}
+}, “\uD83D\uDCCA Quote Comparison”), /*#**PURE***/React.createElement(“a”, {
+href: “https://www.brightonhomes.net.au/house-designs/double-storey/oscar”,
+target: “_blank”,
+rel: “noreferrer”,
+style: {
+fontSize: “12px”,
+color: “#7ddce8”,
+textDecoration: “none”,
+display: “flex”,
+alignItems: “center”,
+gap: “5px”,
+border: “1px solid rgba(255,255,255,0.25)”,
+padding: “5px 12px”,
+borderRadius: “6px”
+}
+}, “\uD83C\uDFE0 Oscar 33”), /*#**PURE***/React.createElement(“div”, {
+style: {
+textAlign: “right”,
+fontSize: “12px”,
+color: “#7ddce8”
+}
+}, /*#**PURE***/React.createElement(“div”, null, “Contract: “, /*#**PURE***/React.createElement(“strong”, {
+style: {
+color: “#fff”
+}
+}, “$”, data.contractPrice.toLocaleString())), /*#**PURE***/React.createElement(“div”, null, “Deposit: “, /*#**PURE***/React.createElement(“strong”, {
+style: {
+color: “#00b9cc”
+}
+}, “$3,000 paid 31 Mar 2026”))))), /*#**PURE***/React.createElement(“div”, {
+style: {
+display: “flex”,
+background: “rgba(255,255,255,0.88)”,
+backdropFilter: “blur(4px)”,
+borderBottom: “1px solid rgba(232,229,222,0.7)”,
+padding: “0 0.75rem”,
+overflowX: “auto”,
+WebkitOverflowScrolling: “touch”
+}
+}, TABS.map(t => /*#**PURE***/React.createElement(“button”, {
+key: t,
+onClick: () => setTab(t),
+style: {
+background: “none”,
+border: “none”,
+padding: “10px 10px”,
+fontSize: “12px”,
+fontWeight: tab === t ? “600” : “400”,
+color: tab === t ? “#006d7c” : “#5a6e7a”,
+borderBottom: tab === t ? “2px solid #006d7c” : “2px solid transparent”,
+cursor: “pointer”,
+whiteSpace: “nowrap”,
+fontFamily: “‘Nunito Sans’,sans-serif”
+}
+}, TLBL[t]))), /*#**PURE***/React.createElement(“div”, {
+style: {
+padding: “1rem”,
+maxWidth: “960px”,
+margin: “0 auto”,
+minHeight: “calc(100vh - 120px)”
+}
+}, tab === “dashboard” && /*#**PURE***/React.createElement(React.Fragment, null, /*#**PURE***/React.createElement(“div”, {
+style: {
+display: “flex”,
+gap: “10px”,
+flexWrap: “wrap”,
+marginBottom: “14px”
+}
+}, [{
+l: “Build progress”,
+v: `${progress}%`,
+s: `${doneStages} of ${data.stages.length} stages`,
+bar: true
+}, {
+l: “Pending actions”,
+v: pendingN,
+s: `${highN} high priority`,
+col: highN > 0 ? “#c0392b” : null
+}, {
+l: “Paid to date”,
+v: `$${totalPaid.toLocaleString()}`,
+s: `of $${data.contractPrice.toLocaleString()}`
+}, {
+l: “Files uploaded”,
+v: data.files.length,
+s: `${data.files.filter(f => f.type?.startsWith("image/")).length} photos`
+}].map((m, i) => /*#**PURE***/React.createElement(“div”, {
+key: i,
+style: C.met
+}, /*#**PURE***/React.createElement(“div”, {
+style: {
+fontSize: “12px”,
+color: “#7a8e99”,
+marginBottom: “4px”
+}
+}, m.l), /*#**PURE***/React.createElement(“div”, {
+style: {
+fontSize: “24px”,
+fontWeight: “600”,
+color: m.col || “#006d7c”
+}
+}, m.v), m.bar && /*#**PURE***/React.createElement(“div”, {
+style: {
+margin: “6px 0 2px”,
+height: “4px”,
+background: “#e8e5de”,
+borderRadius: “2px”
+}
+}, /*#**PURE***/React.createElement(“div”, {
+style: {
+width: `${progress}%`,
+height: “100%”,
+background: “#006d7c”,
+borderRadius: “2px”
+}
+})), /*#**PURE***/React.createElement(“div”, {
+style: {
+fontSize: “11px”,
+color: “#8fa3ad”,
+marginTop: “2px”
+}
+}, m.s)))), /*#**PURE***/React.createElement(“div”, {
+style: C.card
+}, /*#**PURE***/React.createElement(“div”, {
+style: C.h
+}, “Current stage”), data.stages.filter(s => s.status === “active”).map(s => /*#**PURE***/React.createElement(“div”, {
+key: s.id,
+style: {
+display: “flex”,
+gap: “12px”
+}
+}, /*#**PURE***/React.createElement(“div”, {
+style: {
+…C.dot(“active”),
+marginTop: “2px”
+}
+}), /*#**PURE***/React.createElement(“div”, null, /*#**PURE***/React.createElement(“div”, {
+style: {
+fontWeight: “600”
+}
+}, s.name), /*#**PURE***/React.createElement(“div”, {
+style: {
+fontSize: “13px”,
+color: “#5a6e7a”,
+marginTop: “2px”
+}
+}, s.desc)))), !data.stages.find(s => s.status === “active”) && /*#**PURE***/React.createElement(“div”, {
+style: {
+fontSize: “13px”,
+color: “#7a8e99”
+}
+}, “No active stage \u2014 set one in Stages.”)), /*#**PURE***/React.createElement(“div”, {
+style: C.card
+}, /*#**PURE***/React.createElement(“div”, {
+style: C.h
+}, “Urgent to-dos”), data.todos.filter(t => !t.done && t.priority === “high”).slice(0, 6).map(t => /*#**PURE***/React.createElement(“div”, {
+key: t.id,
+style: C.row
+}, /*#**PURE***/React.createElement(“input”, {
+type: “checkbox”,
+onChange: () => tickTodo(t.id),
+style: {
+marginTop: “3px”,
+accentColor: “#006d7c”,
+cursor: “pointer”,
+flexShrink: 0
+}
+}), /*#**PURE***/React.createElement(“div”, null, /*#**PURE***/React.createElement(“span”, {
+style: C.tag(”#c0392b”)
+}, “High”), /*#**PURE***/React.createElement(“span”, {
+style: C.tag(”#5a6e7a”)
+}, t.cat), /*#**PURE***/React.createElement(“div”, {
+style: {
+fontSize: “13px”,
+marginTop: “3px”
+}
+}, t.text)))), !data.todos.find(t => !t.done && t.priority === “high”) && /*#**PURE***/React.createElement(“div”, {
+style: {
+fontSize: “13px”,
+color: “#7a8e99”
+}
+}, “No urgent items \u2014 nice work.”)), /*#**PURE***/React.createElement(“div”, {
+style: C.card
+}, /*#**PURE***/React.createElement(“div”, {
+style: C.h
+}, “Risk register”), [[“Character Overlay cladding (sides & rear)”, “~$18,000 if council requires”, “#c0392b”], [“Piering — screw piers worst case”, “up to +$12,000”, “#d68910”], [“H1 → H2 slab upgrade”, “~+$500”, “#1e8449”], [“Certainty Pricing”, “Not yet available”, “#d68910”], [”$50k cashback + pre-rise pricing”, “Locked in ✓”, “#1e8449”]].map(([l, v, c], i) => /*#**PURE***/React.createElement(“div”, {
+key: i,
+style: {
+display: “flex”,
+justifyContent: “space-between”,
+padding: “7px 0”,
+borderBottom: i < 4 ? “1px solid #f0ede6” : “none”,
+gap: “12px”,
+flexWrap: “wrap”
+}
+}, /*#**PURE***/React.createElement(“span”, {
+style: {
+fontSize: “13px”
+}
+}, l), /*#**PURE***/React.createElement(“span”, {
+style: {
+fontSize: “12px”,
+fontWeight: “600”,
+color: c
+}
+}, v))))), tab === “stages” && /*#**PURE***/React.createElement(“div”, {
+style: C.card
+}, /*#**PURE***/React.createElement(“div”, {
+style: C.h
+}, “Build stages”), data.stages.map((s, i) => /*#**PURE***/React.createElement(“div”, {
+key: s.id,
+style: {
+display: “flex”,
+gap: “12px”,
+padding: “10px 0”,
+borderBottom: “1px solid #f0ede6”,
+flexWrap: “wrap”
+}
+}, /*#**PURE***/React.createElement(“div”, {
+style: C.dot(s.status)
+}), /*#**PURE***/React.createElement(“div”, {
+style: {
+flex: “1 1 160px”
+}
+}, /*#**PURE***/React.createElement(“div”, {
+style: {
+display: “flex”,
+gap: “8px”,
+flexWrap: “wrap”,
+alignItems: “center”
+}
+}, /*#**PURE***/React.createElement(“span”, {
+style: {
+fontWeight: “600”,
+fontSize: “14px”
+}
+}, i + 1, “. “, s.name), /*#**PURE***/React.createElement(“span”, {
+style: {
+fontSize: “11px”,
+fontWeight: “500”,
+textTransform: “uppercase”,
+color: s.status === “complete” ? “#1e8449” : s.status === “active” ? “#00b9cc” : “#9ca3af”
+}
+}, s.status === “complete” ? “✓ Complete” : s.status === “active” ? “● Active” : “Pending”)), /*#**PURE***/React.createElement(“div”, {
+style: {
+fontSize: “12px”,
+color: “#5a6e7a”,
+marginTop: “3px”
+}
+}, s.desc), editSt === s.id ? /*#**PURE***/React.createElement(“div”, {
+style: {
+display: “flex”,
+gap: “8px”,
+marginTop: “8px”,
+alignItems: “center”,
+flexWrap: “wrap”
+}
+}, /*#**PURE***/React.createElement(“input”, {
+type: “text”,
+placeholder: “e.g. 15 Apr 2026”,
+value: stDate,
+onChange: e => setStDate(e.target.value),
+style: {
+…C.inp,
+width: “160px”
+}
+}), /*#**PURE***/React.createElement(“button”, {
+style: C.btn(“pri”),
+onClick: () => saveDate(s.id, stDate)
+}, “Save”), /*#**PURE***/React.createElement(“button”, {
+style: C.btn(),
+onClick: () => setEditSt(null)
+}, “Cancel”)) : /*#**PURE***/React.createElement(“div”, {
+style: {
+fontSize: “12px”,
+color: “#8fa3ad”,
+marginTop: “4px”,
+cursor: “pointer”
+},
+onClick: () => {
+setEditSt(s.id);
+setStDate(s.date);
+}
+}, s.date ? `📅 ${s.date}` : “＋ Add date”)), /*#**PURE***/React.createElement(“div”, {
+style: {
+display: “flex”,
+gap: “6px”,
+flexShrink: 0,
+alignItems: “flex-start”
+}
+}, s.status !== “complete” && /*#**PURE***/React.createElement(“button”, {
+style: C.btn(“pri”),
+onClick: () => markStage(s.id, “complete”)
+}, “Done”), s.status === “complete” && /*#**PURE***/React.createElement(“button”, {
+style: C.btn(),
+onClick: () => markStage(s.id, “pending”)
+}, “Undo”), s.status === “pending” && /*#**PURE***/React.createElement(“button”, {
+style: {
+…C.btn(),
+background: “#e0f7f4”,
+color: “#006d7c”
+},
+onClick: () => markStage(s.id, “active”)
+}, “Set active”))))), tab === “finances” && /*#**PURE***/React.createElement(React.Fragment, null, /*#**PURE***/React.createElement(“div”, {
+style: {
+display: “flex”,
+gap: “10px”,
+flexWrap: “wrap”,
+marginBottom: “14px”
+}
+}, [[“Contract price”, `$${data.contractPrice.toLocaleString()}`, “provisional”], [“Paid to date”, `$${totalPaid.toLocaleString()}`, null, “#1e8449”], [“Outstanding”, `$${(data.contractPrice - totalPaid).toLocaleString()}`]].map(([l, v, s, c], i) => /*#**PURE***/React.createElement(“div”, {
+key: i,
+style: C.met
+}, /*#**PURE***/React.createElement(“div”, {
+style: {
+fontSize: “12px”,
+color: “#7a8e99”,
+marginBottom: “4px”
+}
+}, l), /*#**PURE***/React.createElement(“div”, {
+style: {
+fontSize: “24px”,
+fontWeight: “600”,
+color: c || “#006d7c”
+}
+}, v), s && /*#**PURE***/React.createElement(“div”, {
+style: {
+fontSize: “11px”,
+color: “#8fa3ad”
+}
+}, s)))), /*#**PURE***/React.createElement(“div”, {
+style: C.card
+}, /*#**PURE***/React.createElement(“div”, {
+style: C.h
+}, “Payment schedule (Schedule 2)”), /*#**PURE***/React.createElement(“div”, {
+style: {
+fontSize: “12px”,
+color: “#7a8e99”,
+marginBottom: “12px”
+}
+}, “Percentages per Brighton’s HIA contract. Amounts calculated once contract price is confirmed.”), data.payments.map(p => {
+const calcAmt = p.amount || (p.pct && p.pct !== “—” ? Math.round(data.contractPrice * parseFloat(p.pct) / 100) : null);
+return /*#**PURE***/React.createElement(“div”, {
+key: p.id,
+style: {
+padding: “10px 0”,
+borderBottom: “1px solid #f0ede6”
+}
+}, /*#**PURE***/React.createElement(“div”, {
+style: {
+display: “flex”,
+justifyContent: “space-between”,
+flexWrap: “wrap”,
+gap: “8px”,
+alignItems: “flex-start”
+}
+}, /*#**PURE***/React.createElement(“div”, {
+style: {
+display: “flex”,
+gap: “10px”,
+alignItems: “flex-start”
+}
+}, /*#**PURE***/React.createElement(“input”, {
+type: “checkbox”,
+checked: p.paid,
+onChange: () => tickPay(p.id),
+style: {
+marginTop: “3px”,
+accentColor: “#006d7c”,
+cursor: “pointer”,
+flexShrink: 0
+}
+}), /*#**PURE***/React.createElement(“div”, null, /*#**PURE***/React.createElement(“div”, {
+style: {
+display: “flex”,
+alignItems: “center”,
+gap: “8px”,
+flexWrap: “wrap”
+}
+}, /*#**PURE***/React.createElement(“div”, {
+style: {
+fontWeight: “600”,
+fontSize: “14px”,
+textDecoration: p.paid ? “line-through” : “none”,
+color: p.paid ? “#8fa3ad” : “#1a2e35”
+}
+}, p.stage), p.pct && p.pct !== “—” && /*#**PURE***/React.createElement(“div”, {
+style: {
+fontSize: “11px”,
+fontWeight: “700”,
+color: “#006d7c”,
+background: “#e0f7f4”,
+padding: “2px 7px”,
+borderRadius: “4px”
+}
+}, p.pct)), /*#**PURE***/React.createElement(“div”, {
+style: {
+fontSize: “12px”,
+color: “#7a8e99”
+}
+}, “Due: “, p.due), p.note && /*#**PURE***/React.createElement(“div”, {
+style: {
+fontSize: “11px”,
+color: “#8fa3ad”,
+fontStyle: “italic”
+}
+}, p.note), p.paid && p.paidDate && /*#**PURE***/React.createElement(“div”, {
+style: {
+fontSize: “11px”,
+color: “#1e8449”
+}
+}, “\u2713 Paid “, p.paidDate))), /*#**PURE***/React.createElement(“div”, {
+style: {
+textAlign: “right”,
+flexShrink: 0
+}
+}, calcAmt && !p.amount && /*#**PURE***/React.createElement(“div”, {
+style: {
+fontSize: “11px”,
+color: “#8fa3ad”,
+marginBottom: “3px”
+}
+}, “est. $”, calcAmt.toLocaleString()), /*#**PURE***/React.createElement(“div”, {
+style: {
+display: “flex”,
+alignItems: “center”,
+gap: “6px”
+}
+}, /*#**PURE***/React.createElement(“span”, {
+style: {
+fontSize: “12px”,
+color: “#5a6e7a”
+}
+}, “$”), /*#**PURE***/React.createElement(“input”, {
+type: “number”,
+placeholder: “TBC”,
+value: p.amount || “”,
+onChange: e => editPay(p.id, e.target.value),
+style: {
+…C.inp,
+width: “90px”,
+textAlign: “right”
+}
+})))));
+}), /*#**PURE***/React.createElement(“div”, {
+style: {
+padding: “10px 0”,
+display: “flex”,
+justifyContent: “space-between”,
+alignItems: “center”,
+borderTop: “2px solid #e8e5de”,
+marginTop: “4px”
+}
+}, /*#**PURE***/React.createElement(“div”, {
+style: {
+fontWeight: “600”,
+fontSize: “13px”
+}
+}, “Total (Contract Price)”), /*#**PURE***/React.createElement(“div”, {
+style: {
+fontWeight: “700”,
+fontSize: “15px”,
+color: “#006d7c”
+}
+}, “$”, data.contractPrice.toLocaleString()))), /*#**PURE***/React.createElement(“div”, {
+style: {
+…C.card,
+background: “#f0f9ff”,
+borderColor: “#bae6fd”
+}
+}, /*#**PURE***/React.createElement(“div”, {
+style: {
+fontSize: “13px”,
+fontWeight: “600”,
+color: “#0369a1”,
+marginBottom: “8px”
+}
+}, “Variable risks not in quoted total”), [[“Character Overlay cladding”, “~$18,000”], [“Screw piers worst case”, “up to +$12,000”], [“H1 → H2 slab upgrade”, “~+$500”], [“Butler’s pantry (if added)”, “$5,380”], [“Under-stairs door (if added)”, “$560”]].map(([l, v], i) => /*#**PURE***/React.createElement(“div”, {
+key: i,
+style: {
+display: “flex”,
+justifyContent: “space-between”,
+fontSize: “13px”,
+padding: “5px 0”,
+borderBottom: i < 4 ? “1px solid #e0f2fe” : “none”
+}
+}, /*#**PURE***/React.createElement(“span”, {
+style: {
+color: “#0369a1”
+}
+}, l), /*#**PURE***/React.createElement(“span”, {
+style: {
+fontWeight: “600”,
+color: “#0369a1”
+}
+}, v))))), tab === “todos” && /*#**PURE***/React.createElement(“div”, {
+style: C.card
+}, /*#**PURE***/React.createElement(“div”, {
+style: {
+display: “flex”,
+gap: “6px”,
+marginBottom: “14px”,
+flexWrap: “wrap”
+}
+}, TCATS.map(c => /*#**PURE***/React.createElement(“button”, {
+key: c,
+onClick: () => setTodoCat(c),
+style: C.pill(todoCat === c)
+}, c))), /*#**PURE***/React.createElement(“div”, {
+style: {
+display: “flex”,
+gap: “8px”,
+marginBottom: “16px”,
+flexWrap: “wrap”
+}
+}, /*#**PURE***/React.createElement(“input”, {
+value: newTodo,
+onChange: e => setNewTodo(e.target.value),
+onKeyDown: e => e.key === “Enter” && addTodo(),
+placeholder: “Add a new action\u2026”,
+style: {
+…C.inp,
+flex: “1 1 140px”
+}
+}), /*#**PURE***/React.createElement(“select”, {
+value: newPri,
+onChange: e => setNewPri(e.target.value),
+style: C.sel
+}, /*#**PURE***/React.createElement(“option”, {
+value: “high”
+}, “High”), /*#**PURE***/React.createElement(“option”, {
+value: “medium”
+}, “Medium”), /*#**PURE***/React.createElement(“option”, {
+value: “low”
+}, “Low”)), /*#**PURE***/React.createElement(“select”, {
+value: newTCat,
+onChange: e => setNewTCat(e.target.value),
+style: C.sel
+}, TCATS.filter(c => c !== “All”).map(c => /*#**PURE***/React.createElement(“option”, {
+key: c
+}, c))), /*#**PURE***/React.createElement(“button”, {
+style: C.btn(“pri”),
+onClick: addTodo
+}, “Add”)), [[“high”, “#c0392b”], [“medium”, “#d68910”], [“low”, “#1e8449”]].map(([pri, col]) => {
+const items = ftodos.filter(t => t.priority === pri && !t.done);
+if (!items.length) return null;
+return /*#**PURE***/React.createElement(“div”, {
+key: pri,
+style: {
+marginBottom: “14px”
+}
+}, /*#**PURE***/React.createElement(“div”, {
+style: {
+fontSize: “11px”,
+fontWeight: “700”,
+color: col,
+textTransform: “uppercase”,
+letterSpacing: “0.8px”,
+marginBottom: “8px”
+}
+}, pri.charAt(0).toUpperCase() + pri.slice(1), “ priority”), items.map(t => /*#**PURE***/React.createElement(“div”, {
+key: t.id,
+style: C.row
+}, /*#**PURE***/React.createElement(“input”, {
+type: “checkbox”,
+onChange: () => tickTodo(t.id),
+style: {
+marginTop: “3px”,
+accentColor: “#006d7c”,
+cursor: “pointer”,
+flexShrink: 0
+}
+}), /*#**PURE***/React.createElement(“div”, {
+style: {
+flex: 1
+}
+}, /*#**PURE***/React.createElement(“span”, {
+style: C.tag(”#5a6e7a”)
+}, t.cat), editTodoId === t.id ? /*#**PURE***/React.createElement(“div”, {
+style: {
+display: “flex”,
+gap: “6px”,
+marginTop: “4px”,
+alignItems: “center”
+}
+}, /*#**PURE***/React.createElement(“input”, {
+autoFocus: true,
+value: editTodoTxt,
+onChange: e => setEditTodoTxt(e.target.value),
+onKeyDown: e => {
+if (e.key === “Enter”) saveEditTodo(t.id);
+if (e.key === “Escape”) {
+setEditTodoId(null);
+}
+},
+style: {
+…C.inp,
+flex: 1,
+fontSize: “13px”,
+padding: “5px 8px”
+}
+}), /*#**PURE***/React.createElement(“button”, {
+onClick: () => saveEditTodo(t.id),
+style: {
+…C.btn(“pri”),
+padding: “5px 10px”,
+fontSize: “12px”
+}
+}, “Save”), /*#**PURE***/React.createElement(“button”, {
+onClick: () => setEditTodoId(null),
+style: {
+…C.btn(),
+padding: “5px 10px”,
+fontSize: “12px”
+}
+}, “Cancel”)) : /*#**PURE***/React.createElement(“div”, {
+style: {
+fontSize: “13px”,
+marginTop: “3px”,
+cursor: “pointer”
+},
+onClick: () => {
+setEditTodoId(t.id);
+setEditTodoText(t.text);
+},
+title: “Click to edit”
+}, t.text)), /*#**PURE***/React.createElement(“button”, {
+onClick: () => delTodo(t.id),
+style: {
+background: “none”,
+border: “none”,
+color: “#ccc”,
+cursor: “pointer”,
+fontSize: “18px”,
+flexShrink: 0
+}
+}, “\xD7”))));
+}), ftodos.filter(t => t.done).length > 0 && /*#**PURE***/React.createElement(“div”, null, /*#**PURE***/React.createElement(“div”, {
+style: {
+fontSize: “11px”,
+fontWeight: “700”,
+color: “#8fa3ad”,
+textTransform: “uppercase”,
+letterSpacing: “0.8px”,
+marginBottom: “8px”
+}
+}, “Completed”), ftodos.filter(t => t.done).map(t => /*#**PURE***/React.createElement(“div”, {
+key: t.id,
+style: {
+…C.row,
+opacity: 0.55
+}
+}, /*#**PURE***/React.createElement(“input”, {
+type: “checkbox”,
+checked: true,
+onChange: () => tickTodo(t.id),
+style: {
+marginTop: “3px”,
+accentColor: “#006d7c”,
+cursor: “pointer”,
+flexShrink: 0
+}
+}), /*#**PURE***/React.createElement(“div”, {
+style: {
+fontSize: “13px”,
+textDecoration: “line-through”,
+color: “#8fa3ad”,
+flex: 1
+}
+}, t.text), /*#**PURE***/React.createElement(“button”, {
+onClick: () => delTodo(t.id),
+style: {
+background: “none”,
+border: “none”,
+color: “#ccc”,
+cursor: “pointer”,
+fontSize: “18px”,
+flexShrink: 0
+}
+}, “\xD7”))))), tab === “files” && /*#**PURE***/React.createElement(React.Fragment, null, /*#**PURE***/React.createElement(“div”, {
+onDragOver: e => {
+e.preventDefault();
+setDragOver(true);
+},
+onDragLeave: () => setDragOver(false),
+onDrop: e => {
+e.preventDefault();
+setDragOver(false);
+uploadFiles(e.dataTransfer.files);
+},
+onClick: () => fileRef.current?.click(),
+style: {
+border: `2px dashed ${dragOver ? "#006d7c" : "#c8c3ba"}`,
+borderRadius: “12px”,
+padding: “2rem”,
+textAlign: “center”,
+cursor: “pointer”,
+background: dragOver ? “#f0f9ff” : “#faf9f7”,
+marginBottom: “12px”
+}
+}, /*#**PURE***/React.createElement(“input”, {
+ref: fileRef,
+type: “file”,
+multiple: true,
+accept: “image/*,.pdf,.doc,.docx,.xls,.xlsx”,
+style: {
+display: “none”
+},
+onChange: e => uploadFiles(e.target.files)
+}), /*#**PURE***/React.createElement(“div”, {
+style: {
+fontSize: “32px”,
+marginBottom: “8px”
+}
+}, uploading ? “⏳” : “＋”), /*#**PURE***/React.createElement(“div”, {
+style: {
+fontWeight: “600”,
+color: “#006d7c”,
+marginBottom: “4px”
+}
+}, uploading ? “Uploading…” : “Drop files here or click to upload”), /*#**PURE***/React.createElement(“div”, {
+style: {
+fontSize: “12px”,
+color: “#7a8e99”
+}
+}, “Photos, PDFs, quotes, plans, council docs \xB7 Images compressed automatically \xB7 Max 3.5MB for documents”), upErr && /*#**PURE***/React.createElement(“div”, {
+style: {
+marginTop: “8px”,
+fontSize: “12px”,
+color: “#c0392b”
+}
+}, upErr)), /*#**PURE***/React.createElement(“div”, {
+style: {
+display: “flex”,
+gap: “6px”,
+marginBottom: “14px”,
+flexWrap: “wrap”
+}
+}, FCATS.map(c => /*#**PURE***/React.createElement(“button”, {
+key: c,
+onClick: () => setFileCat(c),
+style: C.pill(fileCat === c)
+}, c))), data.files.length === 0 && /*#**PURE***/React.createElement(“div”, {
+style: {
+…C.card,
+color: “#8fa3ad”,
+fontSize: “13px”,
+textAlign: “center”,
+padding: “2rem”
+}
+}, “No files uploaded yet.”), imgFiles.length > 0 && /*#**PURE***/React.createElement(React.Fragment, null, /*#**PURE***/React.createElement(“div”, {
+style: {
+fontSize: “11px”,
+fontWeight: “600”,
+color: “#5a6e7a”,
+marginBottom: “10px”,
+textTransform: “uppercase”,
+letterSpacing: “0.6px”
+}
+}, “Photos (”, imgFiles.length, “)”), /*#**PURE***/React.createElement(“div”, {
+style: {
+display: “grid”,
+gridTemplateColumns: “repeat(auto-fill, minmax(120px,1fr))”,
+gap: “10px”,
+marginBottom: “16px”
+}
+}, imgFiles.map(f => /*#**PURE***/React.createElement(“div”, {
+key: f.id,
+style: {
+borderRadius: “10px”,
+overflow: “hidden”,
+border: “1px solid #e8e5de”,
+cursor: “pointer”,
+position: “relative”
+},
+onClick: () => openPreview(f)
+}, /*#**PURE***/React.createElement(Thumb, {
+id: f.id
+}), /*#**PURE***/React.createElement(“div”, {
+style: {
+padding: “6px 8px”
+}
+}, /*#**PURE***/React.createElement(“div”, {
+style: {
+fontSize: “11px”,
+fontWeight: “500”,
+overflow: “hidden”,
+textOverflow: “ellipsis”,
+whiteSpace: “nowrap”
+}
+}, f.name), /*#**PURE***/React.createElement(“div”, {
+style: {
+fontSize: “10px”,
+color: “#8fa3ad”
+}
+}, f.uploadedAt)), /*#**PURE***/React.createElement(“button”, {
+onClick: e => {
+e.stopPropagation();
+delFile(f.id);
+},
+style: {
+position: “absolute”,
+top: “4px”,
+right: “4px”,
+background: “rgba(0,0,0,0.55)”,
+border: “none”,
+borderRadius: “50%”,
+width: “22px”,
+height: “22px”,
+color: “#fff”,
+cursor: “pointer”,
+fontSize: “13px”,
+display: “flex”,
+alignItems: “center”,
+justifyContent: “center”
+}
+}, “\xD7”))))), docFiles.length > 0 && /*#**PURE***/React.createElement(React.Fragment, null, /*#**PURE***/React.createElement(“div”, {
+style: {
+fontSize: “11px”,
+fontWeight: “600”,
+color: “#5a6e7a”,
+marginBottom: “10px”,
+textTransform: “uppercase”,
+letterSpacing: “0.6px”
+}
+}, “Documents (”, docFiles.length, “)”), /*#**PURE***/React.createElement(“div”, {
+style: C.card
+}, docFiles.map((f, i) => /*#**PURE***/React.createElement(“div”, {
+key: f.id,
+style: {
+display: “flex”,
+gap: “12px”,
+alignItems: “center”,
+padding: “10px 0”,
+borderBottom: i < docFiles.length - 1 ? “1px solid #f0ede6” : “none”
+}
+}, /*#**PURE***/React.createElement(“div”, {
+style: {
+width: “36px”,
+height: “36px”,
+borderRadius: “8px”,
+background: f.type === “application/pdf” ? “#fee2e2” : “#e0f2fe”,
+display: “flex”,
+alignItems: “center”,
+justifyContent: “center”,
+fontSize: “18px”,
+flexShrink: 0
+}
+}, f.type === “application/pdf” ? “📄” : “📋”), /*#**PURE***/React.createElement(“div”, {
+style: {
+flex: 1,
+minWidth: 0
+}
+}, /*#**PURE***/React.createElement(“div”, {
+style: {
+fontWeight: “500”,
+fontSize: “13px”,
+overflow: “hidden”,
+textOverflow: “ellipsis”,
+whiteSpace: “nowrap”
+}
+}, f.name), /*#**PURE***/React.createElement(“div”, {
+style: {
+fontSize: “11px”,
+color: “#7a8e99”
+}
+}, f.cat, “ \xB7 “, Math.round((f.size || 0) / 1024), “KB \xB7 “, f.uploadedAt)), /*#**PURE***/React.createElement(“div”, {
+style: {
+display: “flex”,
+gap: “6px”,
+flexShrink: 0
+}
+}, /*#**PURE***/React.createElement(“button”, {
+style: C.btn(),
+onClick: () => openPreview(f)
+}, “View”), /*#**PURE***/React.createElement(“button”, {
+style: C.btn(“red”),
+onClick: () => delFile(f.id)
+}, “Delete”))))))), tab === “contacts” && /*#**PURE***/React.createElement(React.Fragment, null, /*#**PURE***/React.createElement(“div”, {
+style: {
+display: “grid”,
+gridTemplateColumns: “repeat(auto-fill, minmax(200px,1fr))”,
+gap: “12px”,
+marginBottom: “12px”
+}
+}, data.contacts.map(c => /*#**PURE***/React.createElement(“div”, {
+key: c.id,
+style: {
+…C.card,
+marginBottom: 0
+}
+}, /*#**PURE***/React.createElement(“div”, {
+style: {
+width: “36px”,
+height: “36px”,
+borderRadius: “50%”,
+background: “linear-gradient(135deg,#006d7c,#004f5a)”,
+display: “flex”,
+alignItems: “center”,
+justifyContent: “center”,
+color: “#fff”,
+fontWeight: “600”,
+fontSize: “13px”,
+marginBottom: “10px”
+}
+}, c.name.split(” “).map(w => w[0]).slice(0, 2).join(””)), /*#**PURE***/React.createElement(“div”, {
+style: {
+fontWeight: “600”
+}
+}, c.name), /*#**PURE***/React.createElement(“div”, {
+style: {
+fontSize: “12px”,
+color: “#00b9cc”,
+fontWeight: “500”,
+marginTop: “2px”
+}
+}, c.role), c.company && /*#**PURE***/React.createElement(“div”, {
+style: {
+fontSize: “12px”,
+color: “#7a8e99”
+}
+}, c.company), /*#**PURE***/React.createElement(“div”, {
+style: {
+marginTop: “10px”,
+display: “flex”,
+flexDirection: “column”,
+gap: “4px”
+}
+}, c.phone && /*#**PURE***/React.createElement(“a”, {
+href: `tel:${c.phone}`,
+style: {
+fontSize: “13px”,
+color: “#006d7c”,
+textDecoration: “none”
+}
+}, “\uD83D\uDCDE “, c.phone), c.email && /*#**PURE***/React.createElement(“a”, {
+href: `mailto:${c.email}`,
+style: {
+fontSize: “13px”,
+color: “#006d7c”,
+textDecoration: “none”,
+wordBreak: “break-all”
+}
+}, “\u2709 “, c.email))))), showCon ? /*#**PURE***/React.createElement(“div”, {
+style: C.card
+}, /*#**PURE***/React.createElement(“div”, {
+style: C.h
+}, “Add contact”), /*#**PURE***/React.createElement(“div”, {
+style: {
+display: “grid”,
+gridTemplateColumns: “repeat(auto-fill, minmax(140px,1fr))”,
+gap: “10px”,
+marginBottom: “12px”
+}
+}, [[“name”, “Name *”], [“role”, “Role”], [“company”, “Company”], [“phone”, “Phone”], [“email”, “Email”]].map(([f, l]) => /*#**PURE***/React.createElement(“input”, {
+key: f,
+placeholder: l,
+value: newCon[f],
+onChange: e => setNewCon(p => ({
+…p,
+[f]: e.target.value
+})),
+style: C.inp
+}))), /*#**PURE***/React.createElement(“div”, {
+style: {
+display: “flex”,
+gap: “8px”
+}
+}, /*#**PURE***/React.createElement(“button”, {
+style: C.btn(“pri”),
+onClick: addCon
+}, “Save”), /*#**PURE***/React.createElement(“button”, {
+style: C.btn(),
+onClick: () => setShowCon(false)
+}, “Cancel”))) : /*#**PURE***/React.createElement(“button”, {
+style: C.btn(“pri”),
+onClick: () => setShowCon(true)
+}, “\uFF0B Add contact”)), tab === “notes” && /*#**PURE***/React.createElement(React.Fragment, null, /*#**PURE***/React.createElement(“div”, {
+style: C.card
+}, /*#**PURE***/React.createElement(“textarea”, {
+value: newNote,
+onChange: e => setNewNote(e.target.value),
+placeholder: “Add a note \u2014 conversations with June, decisions made, things to remember\u2026”,
+rows: 4,
+style: {
+…C.inp,
+resize: “vertical”,
+marginBottom: “10px”
+}
+}), /*#**PURE***/React.createElement(“button”, {
+style: C.btn(“pri”),
+onClick: addNote
+}, “Save note”)), data.notes.length === 0 && /*#**PURE***/React.createElement(“div”, {
+style: {
+…C.card,
+color: “#8fa3ad”,
+fontSize: “13px”
+}
+}, “No notes yet.”), […data.notes].reverse().map(n => /*#**PURE***/React.createElement(“div”, {
+key: n.id,
+style: C.card
+}, /*#**PURE***/React.createElement(“div”, {
+style: {
+display: “flex”,
+justifyContent: “space-between”,
+alignItems: “flex-start”
+}
+}, /*#**PURE***/React.createElement(“div”, {
+style: {
+fontSize: “13px”,
+lineHeight: “1.6”,
+flex: 1,
+whiteSpace: “pre-wrap”
+}
+}, n.text), /*#**PURE***/React.createElement(“button”, {
+onClick: () => delNote(n.id),
+style: {
+background: “none”,
+border: “none”,
+color: “#ccc”,
+cursor: “pointer”,
+fontSize: “18px”,
+marginLeft: “12px”,
+flexShrink: 0
+}
+}, “\xD7”)), /*#**PURE***/React.createElement(“div”, {
+style: {
+fontSize: “11px”,
+color: “#8fa3ad”,
+marginTop: “8px”
+}
+}, n.date)))), tab === “claude” && /*#**PURE***/React.createElement(“div”, {
+style: {
+display: “flex”,
+flexDirection: “column”,
+height: “calc(100vh - 170px)”,
+minHeight: “500px”
+}
+}, /*#**PURE***/React.createElement(“div”, {
+style: {
+…C.card,
+background: “#f0f9ff”,
+borderColor: “#bae6fd”,
+marginBottom: “10px”,
+padding: “0.75rem 1.25rem”,
+flexShrink: 0
+}
+}, /*#**PURE***/React.createElement(“div”, {
+style: {
+fontSize: “12px”,
+color: “#0369a1”,
+lineHeight: “1.6”
+}
+}, /*#**PURE***/React.createElement(“strong”, null, “Claude knows your entire build.”), “ Ask questions or request changes \u2014 "add a to-do to call June about cladding", "mark site inspection complete", "what are my urgent actions?"”)), /*#**PURE***/React.createElement(“div”, {
+style: {
+flex: 1,
+overflowY: “auto”,
+display: “flex”,
+flexDirection: “column”,
+gap: “12px”,
+padding: “4px 0”,
+marginBottom: “12px”
+}
+}, (!data.chatHistory || data.chatHistory.length === 0) && /*#**PURE***/React.createElement(“div”, {
+style: {
+textAlign: “center”,
+padding: “3rem 2rem”,
+color: “#8fa3ad”
+}
+}, /*#**PURE***/React.createElement(“div”, {
+style: {
+fontSize: “32px”,
+marginBottom: “12px”
+}
+}, “\u2726”), /*#**PURE***/React.createElement(“div”, {
+style: {
+fontFamily: “‘Playfair Display’,serif”,
+fontSize: “18px”,
+color: “#5a6e7a”,
+marginBottom: “10px”
+}
+}, “How can I help with the build?”), /*#**PURE***/React.createElement(“div”, {
+style: {
+fontSize: “13px”,
+lineHeight: “1.9”,
+color: “#7a8e99”
+}
+}, “"What are my urgent to-dos?"”, /*#**PURE***/React.createElement(“br”, null), “"Mark the site inspection as complete"”, /*#**PURE***/React.createElement(“br”, null), “"What are the key risks right now?"”)), (data.chatHistory || []).map((msg, i) => /*#**PURE***/React.createElement(“div”, {
+key: i,
+style: {
+display: “flex”,
+justifyContent: msg.role === “user” ? “flex-end” : “flex-start”
+}
+}, /*#**PURE***/React.createElement(“div”, {
+style: {
+maxWidth: “calc(100% - 24px)”,
+padding: “10px 14px”,
+borderRadius: msg.role === “user” ? “16px 16px 4px 16px” : “16px 16px 16px 4px”,
+background: msg.role === “user” ? “#006d7c” : “#fff”,
+color: msg.role === “user” ? “#fff” : “#1a2e35”,
+fontSize: “14px”,
+lineHeight: “1.7”,
+border: msg.role === “assistant” ? “1px solid #e8e5de” : “none”,
+wordBreak: “break-word”
+}
+}, msg.role === “assistant” ? renderMarkdown(msg.content) : msg.content, msg.changes?.length > 0 && /*#**PURE***/React.createElement(“div”, {
+style: {
+marginTop: “10px”,
+padding: “8px 10px”,
+background: “#f0f9ff”,
+borderRadius: “8px”,
+border: “1px solid #bae6fd”
+}
+}, /*#**PURE***/React.createElement(“div”, {
+style: {
+fontSize: “11px”,
+fontWeight: “600”,
+color: “#0369a1”,
+marginBottom: “4px”,
+textTransform: “uppercase”,
+letterSpacing: “0.5px”
+}
+}, “Changes made”), msg.changes.map((c, ci) => /*#**PURE***/React.createElement(“div”, {
+key: ci,
+style: {
+fontSize: “12px”,
+color: “#0369a1”
+}
+}, “\u2713 “, c)))))), chatBusy && /*#**PURE***/React.createElement(“div”, {
+style: {
+display: “flex”
+}
+}, /*#**PURE***/React.createElement(“div”, {
+style: {
+padding: “12px 16px”,
+borderRadius: “16px 16px 16px 4px”,
+background: “#fff”,
+border: “1px solid #e8e5de”
+}
+}, /*#**PURE***/React.createElement(“div”, {
+style: {
+display: “flex”,
+gap: “5px”,
+alignItems: “center”
+}
+}, [0, 1, 2].map(i => /*#**PURE***/React.createElement(“div”, {
+key: i,
+style: {
+width: “7px”,
+height: “7px”,
+borderRadius: “50%”,
+background: “#00b9cc”,
+animation: `bounce 1.2s ease-in-out ${i * 0.15}s infinite`
+}
+}))))), /*#**PURE***/React.createElement(“div”, {
+ref: chatEnd
+})), /*#**PURE***/React.createElement(“div”, {
+style: {
+display: “flex”,
+gap: “8px”,
+alignItems: “flex-end”,
+flexShrink: 0
+}
+}, /*#**PURE***/React.createElement(“textarea”, {
+value: chatIn,
+onChange: e => setChatIn(e.target.value),
+onKeyDown: e => {
+if (e.key === “Enter” && !e.shiftKey) {
+e.preventDefault();
+sendChat();
+}
+},
+placeholder: “Message Claude\u2026”,
+rows: 3,
+style: {
+…C.inp,
+flex: 1,
+resize: “none”,
+fontSize: “16px”
+}
+}), /*#**PURE***/React.createElement(“div”, {
+style: {
+display: “flex”,
+flexDirection: “column”,
+gap: “6px”
+}
+}, /*#**PURE***/React.createElement(“button”, {
+style: {
+…C.btn(“pri”),
+padding: “10px 18px”
+},
+onClick: sendChat,
+disabled: chatBusy
+}, chatBusy ? “…” : “Send ↑”), data.chatHistory?.length > 0 && /*#**PURE***/React.createElement(“button”, {
+style: {
+…C.btn(),
+fontSize: “11px”,
+padding: “5px 10px”
+},
+onClick: () => save({
+…data,
+chatHistory: []
+})
+}, “Clear”)))), tab === “settings” && /*#**PURE***/React.createElement(React.Fragment, null, /*#**PURE***/React.createElement(“div”, {
+style: C.card
+}, /*#**PURE***/React.createElement(“div”, {
+style: C.h
+}, “Background image”), /*#**PURE***/React.createElement(“div”, {
+style: {
+fontSize: “13px”,
+color: “#5a6e7a”,
+marginBottom: “16px”
+}
+}, “Upload up to two background images and switch between them. A soft overlay keeps everything readable.”), /*#**PURE***/React.createElement(“div”, {
+style: {
+display: “grid”,
+gridTemplateColumns: “repeat(auto-fill, minmax(140px,1fr))”,
+gap: “12px”,
+marginBottom: “12px”
+}
+}, [“slot1”, “slot2”].map((slot, i) => /*#**PURE***/React.createElement(“div”, {
+key: slot,
+style: {
+border: `2px solid ${bgConfig.active === slot ? "#006d7c" : "#e8e5de"}`,
+borderRadius: “12px”,
+overflow: “hidden”,
+background: “#faf9f7”
+}
+}, bgConfig[slot] ? /*#**PURE***/React.createElement(React.Fragment, null, /*#**PURE***/React.createElement(“div”, {
+style: {
+position: “relative”,
+height: “140px”
+}
+}, /*#**PURE***/React.createElement(“img”, {
+src: bgConfig[slot],
+alt: “”,
+style: {
+width: “100%”,
+height: “100%”,
+objectFit: “cover”,
+display: “block”
+}
+}), bgConfig.active === slot && /*#**PURE***/React.createElement(“div”, {
+style: {
+position: “absolute”,
+top: “8px”,
+left: “8px”,
+background: “#006d7c”,
+color: “#fff”,
+fontSize: “10px”,
+fontWeight: “700”,
+padding: “3px 8px”,
+borderRadius: “4px”,
+textTransform: “uppercase”,
+letterSpacing: “0.5px”
+}
+}, “Active”)), /*#**PURE***/React.createElement(“div”, {
+style: {
+padding: “10px 12px”,
+display: “flex”,
+gap: “8px”,
+flexWrap: “wrap”
+}
+}, /*#**PURE***/React.createElement(“div”, {
+style: {
+fontSize: “12px”,
+color: “#5a6e7a”,
+flex: 1,
+alignSelf: “center”
+}
+}, “Image “, i + 1), bgConfig.active !== slot && /*#**PURE***/React.createElement(“button”, {
+style: {
+…C.btn(“pri”),
+fontSize: “11px”,
+padding: “5px 12px”
+},
+onClick: () => saveBg({
+…bgConfig,
+active: slot
+})
+}, “Use this”), bgConfig.active === slot && /*#**PURE***/React.createElement(“button”, {
+style: {
+…C.btn(),
+fontSize: “11px”,
+padding: “5px 12px”
+},
+onClick: () => saveBg({
+…bgConfig,
+active: null
+})
+}, “Deactivate”), /*#**PURE***/React.createElement(“button”, {
+style: {
+…C.btn(“red”),
+fontSize: “11px”,
+padding: “5px 12px”
+},
+onClick: () => removeBg(slot)
+}, “Remove”))) : /*#**PURE***/React.createElement(“div”, {
+onClick: () => (slot === “slot1” ? bgRef1 : bgRef2).current?.click(),
+style: {
+height: “180px”,
+display: “flex”,
+flexDirection: “column”,
+alignItems: “center”,
+justifyContent: “center”,
+cursor: “pointer”,
+gap: “8px”,
+padding: “1rem”
+}
+}, /*#**PURE***/React.createElement(“div”, {
+style: {
+fontSize: “28px”,
+opacity: 0.4
+}
+}, “\uFF0B”), /*#**PURE***/React.createElement(“div”, {
+style: {
+fontSize: “12px”,
+color: “#7a8e99”,
+textAlign: “center”
+}
+}, “Upload image “, i + 1), /*#**PURE***/React.createElement(“div”, {
+style: {
+fontSize: “11px”,
+color: “#8fa3ad”,
+textAlign: “center”
+}
+}, “JPG or PNG \xB7 auto-compressed”)), /*#**PURE***/React.createElement(“input”, {
+ref: slot === “slot1” ? bgRef1 : bgRef2,
+type: “file”,
+accept: “image/*”,
+style: {
+display: “none”
+},
+onChange: e => {
+if (e.target.files[0]) uploadBg(slot, e.target.files[0]);
+e.target.value = “”;
+}
+})))), bgLoading && /*#**PURE***/React.createElement(“div”, {
+style: {
+fontSize: “12px”,
+color: “#5a6e7a”
+}
+}, “Uploading\u2026”), bgErr && /*#**PURE***/React.createElement(“div”, {
+style: {
+fontSize: “12px”,
+color: “#c0392b”
+}
+}, bgErr)), /*#**PURE***/React.createElement(“div”, {
+style: C.card
+}, /*#**PURE***/React.createElement(“div”, {
+style: C.h
+}, “Change password”), /*#**PURE***/React.createElement(“div”, {
+style: {
+fontSize: “13px”,
+color: “#5a6e7a”,
+marginBottom: “14px”
+}
+}, “Default is “, /*#**PURE***/React.createElement(“code”, {
+style: {
+background: “#f5f4f0”,
+padding: “2px 6px”,
+borderRadius: “4px”,
+fontSize: “12px”
+}
+}, “balmoral2026”), “. Share with anyone who needs access.”), /*#**PURE***/React.createElement(“div”, {
+style: {
+display: “flex”,
+flexDirection: “column”,
+gap: “10px”,
+maxWidth: “320px”
+}
+}, /*#**PURE***/React.createElement(“input”, {
+type: “password”,
+placeholder: “New password (min 6 characters)”,
+value: newPwd,
+onChange: e => setNewPwd(e.target.value),
+style: C.inp
+}), /*#**PURE***/React.createElement(“input”, {
+type: “password”,
+placeholder: “Confirm new password”,
+value: confPwd,
+onChange: e => setConfPwd(e.target.value),
+onKeyDown: e => e.key === “Enter” && changePwd(),
+style: C.inp
+}), /*#**PURE***/React.createElement(“button”, {
+style: C.btn(“pri”),
+onClick: changePwd
+}, “Update password”), pwdMsg && /*#**PURE***/React.createElement(“div”, {
+style: {
+fontSize: “13px”,
+color: pwdMsg.includes(“success”) ? “#1e8449” : “#c0392b”
+}
+}, pwdMsg))), /*#**PURE***/React.createElement(“div”, {
+style: C.card
+}, /*#**PURE***/React.createElement(“div”, {
+style: C.h
+}, “About”), /*#**PURE***/React.createElement(“div”, {
+style: {
+fontSize: “13px”,
+color: “#5a6e7a”,
+lineHeight: “1.9”
+}
+}, /*#**PURE***/React.createElement(“div”, null, /*#**PURE***/React.createElement(“strong”, {
+style: {
+color: “#1a2e35”
+}
+}, “Property:”), “ 32 Grosvenor St, Balmoral QLD 4171”), /*#**PURE***/React.createElement(“div”, null, /*#**PURE***/React.createElement(“strong”, {
+style: {
+color: “#1a2e35”
+}
+}, “Builder:”), “ Brighton Homes (MJH Group)”), /*#**PURE***/React.createElement(“div”, null, /*#**PURE***/React.createElement(“strong”, {
+style: {
+color: “#1a2e35”
+}
+}, “Design:”), “ Oscar 33, Georgia Facade”), /*#**PURE***/React.createElement(“div”, null, /*#**PURE***/React.createElement(“strong”, {
+style: {
+color: “#1a2e35”
+}
+}, “Consultant:”), “ June Matthews \xB7 0418 165 126”), /*#**PURE***/React.createElement(“div”, null, /*#**PURE***/React.createElement(“strong”, {
+style: {
+color: “#1a2e35”
+}
+}, “Quote:”), “ #766947 \xB7 $602,840 provisional”), /*#**PURE***/React.createElement(“div”, null, /*#**PURE***/React.createElement(“strong”, {
+style: {
+color: “#1a2e35”
+}
+}, “Deposit:”), “ $3,000 paid 31 Mar 2026 (refundable until CT)”), /*#**PURE***/React.createElement(“div”, {
+style: {
+marginTop: “12px”,
+padding: “10px 12px”,
+background: “#f5f4f0”,
+borderRadius: “8px”,
+fontSize: “12px”,
+color: “#7a8e99”,
+lineHeight: “1.6”
+}
+}, “Data stored in Supabase \u2014 all users with the password see the same information in real time across all devices.”)))))), preview && /*#**PURE***/React.createElement(Preview, {
+file: preview.file,
+src: preview.src,
+onClose: () => setPreview(null)
+}));
 }
 window.onerror = function (msg, src, line, col, err) {
-  document.getElementById("root").innerHTML = '<div style="font-family:sans-serif;padding:2rem;color:#c0392b"><strong>Error loading tracker:</strong><br>' + msg + '<br><small>' + (err ? err.stack : '') + '</small></div>';
+document.getElementById(“root”).innerHTML = ‘<div style="font-family:sans-serif;padding:2rem;color:#c0392b"><strong>Error loading tracker:</strong><br>’ + msg + ‘<br><small>’ + (err ? err.stack : ‘’) + ‘</small></div>’;
 };
 try {
-  ReactDOM.createRoot(document.getElementById("root")).render(/*#__PURE__*/React.createElement(App, null));
+ReactDOM.createRoot(document.getElementById(“root”)).render(/*#**PURE***/React.createElement(App, null));
 } catch (e) {
-  document.getElementById("root").innerHTML = '<div style="font-family:sans-serif;padding:2rem;color:#c0392b"><strong>Render error:</strong><br>' + e.message + '</div>';
+document.getElementById(“root”).innerHTML = ‘<div style="font-family:sans-serif;padding:2rem;color:#c0392b"><strong>Render error:</strong><br>’ + e.message + ‘</div>’;
 }
 
   </script>
