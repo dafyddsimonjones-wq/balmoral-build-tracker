@@ -1066,6 +1066,24 @@ function App() {
       await sbSet("bg", JSON.stringify(next));
     } catch {}
   };
+
+  // Apply background to body - must be before early returns (rules of hooks)
+  useEffect(() => {
+    const url = bgConfig.active ? bgConfig[bgConfig.active] : null;
+    if (url) {
+      document.body.style.backgroundImage = "url(" + url + ")";
+      document.body.style.backgroundSize = 'cover';
+      document.body.style.backgroundPosition = 'center';
+      document.body.style.backgroundRepeat = 'no-repeat';
+      document.body.style.backgroundAttachment = 'fixed';
+    } else {
+      document.body.style.backgroundImage = 'none';
+      document.body.style.background = '#f5f4f0';
+    }
+    return () => {
+      document.body.style.backgroundImage = 'none';
+    };
+  }, [bgConfig]);
   if (!authed) return /*#__PURE__*/React.createElement(Login, {
     onAuth: () => setAuthed(true),
     correctPwd: correctPwd
@@ -1095,23 +1113,6 @@ function App() {
   const imgFiles = ffiles.filter(f => f.type?.startsWith("image/"));
   const docFiles = ffiles.filter(f => !f.type?.startsWith("image/"));
   const activeBgUrl = bgConfig.active ? bgConfig[bgConfig.active] : null;
-
-  // Apply background to body so it covers full viewport on all tabs
-  useEffect(() => {
-    if (activeBgUrl) {
-      document.body.style.backgroundImage = "url(" + activeBgUrl + ")";
-      document.body.style.backgroundSize = 'cover';
-      document.body.style.backgroundPosition = 'center';
-      document.body.style.backgroundRepeat = 'no-repeat';
-      document.body.style.backgroundAttachment = 'fixed';
-    } else {
-      document.body.style.backgroundImage = 'none';
-      document.body.style.background = '#f5f4f0';
-    }
-    return () => {
-      document.body.style.backgroundImage = 'none';
-    };
-  }, [activeBgUrl]);
   const markStage = (id, status) => save({
     ...data,
     stages: data.stages.map(s => s.id === id ? {
@@ -2859,7 +2860,7 @@ window.onerror = function (msg, src, line, col, err) {
   document.getElementById("root").innerHTML = '<div style="font-family:sans-serif;padding:2rem;color:#c0392b"><strong>Error loading tracker:</strong><br>' + msg + '<br><small>' + (err ? err.stack : '') + '</small></div>';
 };
 try {
-  document.addEventListener("DOMContentLoaded", function() { ReactDOM.createRoot(document.getElementById("root")).render(/*#__PURE__*/React.createElement(App, null)); });
+  ReactDOM.createRoot(document.getElementById("root")).render(/*#__PURE__*/React.createElement(App, null));
 } catch (e) {
   document.getElementById("root").innerHTML = '<div style="font-family:sans-serif;padding:2rem;color:#c0392b"><strong>Render error:</strong><br>' + e.message + '</div>';
 }
