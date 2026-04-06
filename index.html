@@ -583,7 +583,7 @@ const C = {
     background: "rgba(255,255,255,0.82)",
     backdropFilter: "blur(4px)",
     borderRadius: "12px",
-    padding: "1.25rem 1.5rem",
+    padding: "1rem",
     border: "1px solid rgba(232,229,222,0.7)",
     marginBottom: "12px"
   },
@@ -593,8 +593,7 @@ const C = {
     borderRadius: "10px",
     padding: "1rem 1.25rem",
     border: "1px solid rgba(232,229,222,0.7)",
-    flex: 1,
-    minWidth: "130px"
+    flex: "1 1 120px"
   },
   inp: {
     width: "100%",
@@ -990,6 +989,8 @@ function App() {
   const [tab, setTab] = useState("dashboard");
   const [todoCat, setTodoCat] = useState("All");
   const [newTodo, setNewTodo] = useState("");
+  const [editTodoId, setEditTodoId] = useState(null);
+  const [editTodoTxt, setEditTodoTxt] = useState("");
   const [newPri, setNewPri] = useState("medium");
   const [newTCat, setNewTCat] = useState("Legal");
   const [newNote, setNewNote] = useState("");
@@ -1077,7 +1078,8 @@ function App() {
       document.body.style.backgroundSize = 'cover';
       document.body.style.backgroundPosition = 'center';
       document.body.style.backgroundRepeat = 'no-repeat';
-      document.body.style.backgroundAttachment = 'fixed';
+      document.body.style.backgroundAttachment = 'scroll';
+      document.body.style.minHeight = '100vh';
     } else {
       document.body.style.backgroundImage = 'none';
       document.body.style.background = '#f5f4f0';
@@ -1156,6 +1158,29 @@ function App() {
       }]
     });
     setNewTodo("");
+  };
+  const saveEditTodo = id => {
+    if (!editTodoTxt.trim()) return;
+    save({
+      ...data,
+      todos: data.todos.map(t => t.id === id ? {
+        ...t,
+        text: editTodoTxt.trim()
+      } : t)
+    });
+    setEditTodoId(null);
+  };
+  const saveTodoEdit = id => {
+    if (!editTodoText.trim()) return;
+    save({
+      ...data,
+      todos: data.todos.map(t => t.id === id ? {
+        ...t,
+        text: editTodoText.trim()
+      } : t)
+    });
+    setEditTodoId(null);
+    ;
   };
   const addNote = () => {
     if (!newNote.trim()) return;
@@ -1337,7 +1362,8 @@ function App() {
       const res = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
+          "anthropic-dangerous-direct-browser-access": "true"
         },
         body: JSON.stringify({
           model: "claude-sonnet-4-20250514",
@@ -1367,12 +1393,14 @@ function App() {
           changes: log
         }]
       });
-    } catch {
+    } catch (e) {
+      const isCors = e.message && (e.message.includes("Failed to fetch") || e.message.includes("NetworkError") || e.message.includes("CORS"));
+      const msg = isCors ? "The Claude chat feature can\'t connect from this browser due to API security restrictions. It works when the tracker is opened inside Claude.ai. All other features (stages, to-dos, files, notes, contacts) work normally here." : "Something went wrong — please try again.";
       save({
         ...snap,
         chatHistory: [...hist, {
           role: "assistant",
-          content: "Something went wrong — please try again.",
+          content: msg,
           changes: []
         }]
       });
@@ -1397,15 +1425,7 @@ function App() {
       color: "#1a2e35",
       position: "relative"
     }
-  }, activeBgUrl && /*#__PURE__*/React.createElement("div", {
-    style: {
-      position: "fixed",
-      inset: 0,
-      background: "rgba(245,244,240,0.55)",
-      zIndex: 0,
-      pointerEvents: "none"
-    }
-  }), /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement("div", {
     style: {
       position: "relative",
       zIndex: 1,
@@ -1415,23 +1435,23 @@ function App() {
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       background: "linear-gradient(135deg,#006d7c 0%,#004f5a 100%)",
-      padding: "1.25rem 2rem",
+      padding: "1rem 1.25rem",
       display: "flex",
       justifyContent: "space-between",
       alignItems: "center",
       flexWrap: "wrap",
-      gap: "1rem"
+      gap: "0.75rem"
     }
   }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
     style: {
       fontFamily: "'Playfair Display',serif",
-      fontSize: "20px",
+      fontSize: "clamp(16px,4vw,20px)",
       fontWeight: "600",
       color: "#fff"
     }
   }, "Balmoral Build Tracker"), /*#__PURE__*/React.createElement("div", {
     style: {
-      fontSize: "12px",
+      fontSize: "clamp(10px,2.5vw,12px)",
       color: "#7ddce8",
       marginTop: "2px"
     }
@@ -1439,7 +1459,7 @@ function App() {
     style: {
       display: "flex",
       alignItems: "center",
-      gap: "1.5rem",
+      gap: "0.75rem",
       flexWrap: "wrap"
     }
   }, /*#__PURE__*/React.createElement("a", {
@@ -1492,8 +1512,9 @@ function App() {
       background: "rgba(255,255,255,0.88)",
       backdropFilter: "blur(4px)",
       borderBottom: "1px solid rgba(232,229,222,0.7)",
-      padding: "0 1.5rem",
-      overflowX: "auto"
+      padding: "0 0.75rem",
+      overflowX: "auto",
+      WebkitOverflowScrolling: "touch"
     }
   }, TABS.map(t => /*#__PURE__*/React.createElement("button", {
     key: t,
@@ -1501,8 +1522,8 @@ function App() {
     style: {
       background: "none",
       border: "none",
-      padding: "12px 14px",
-      fontSize: "13px",
+      padding: "10px 10px",
+      fontSize: "12px",
       fontWeight: tab === t ? "600" : "400",
       color: tab === t ? "#006d7c" : "#5a6e7a",
       borderBottom: tab === t ? "2px solid #006d7c" : "2px solid transparent",
@@ -1512,7 +1533,7 @@ function App() {
     }
   }, TLBL[t]))), /*#__PURE__*/React.createElement("div", {
     style: {
-      padding: "1.5rem 2rem",
+      padding: "1rem",
       maxWidth: "960px",
       margin: "0 auto",
       minHeight: "calc(100vh - 120px)"
@@ -1678,8 +1699,7 @@ function App() {
     style: C.dot(s.status)
   }), /*#__PURE__*/React.createElement("div", {
     style: {
-      flex: 1,
-      minWidth: "200px"
+      flex: "1 1 160px"
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
@@ -1897,7 +1917,7 @@ function App() {
       onChange: e => editPay(p.id, e.target.value),
       style: {
         ...C.inp,
-        width: "110px",
+        width: "90px",
         textAlign: "right"
       }
     })))));
@@ -1979,8 +1999,7 @@ function App() {
     placeholder: "Add a new action\u2026",
     style: {
       ...C.inp,
-      flex: 1,
-      minWidth: "180px"
+      flex: "1 1 140px"
     }
   }), /*#__PURE__*/React.createElement("select", {
     value: newPri,
@@ -2036,11 +2055,54 @@ function App() {
       }
     }, /*#__PURE__*/React.createElement("span", {
       style: C.tag("#5a6e7a")
-    }, t.cat), /*#__PURE__*/React.createElement("div", {
+    }, t.cat), editTodoId === t.id ? /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: "flex",
+        gap: "6px",
+        marginTop: "4px",
+        alignItems: "center"
+      }
+    }, /*#__PURE__*/React.createElement("input", {
+      autoFocus: true,
+      value: editTodoTxt,
+      onChange: e => setEditTodoTxt(e.target.value),
+      onKeyDown: e => {
+        if (e.key === "Enter") saveEditTodo(t.id);
+        if (e.key === "Escape") {
+          setEditTodoId(null);
+        }
+      },
+      style: {
+        ...C.inp,
+        flex: 1,
+        fontSize: "13px",
+        padding: "5px 8px"
+      }
+    }), /*#__PURE__*/React.createElement("button", {
+      onClick: () => saveEditTodo(t.id),
+      style: {
+        ...C.btn("pri"),
+        padding: "5px 10px",
+        fontSize: "12px"
+      }
+    }, "Save"), /*#__PURE__*/React.createElement("button", {
+      onClick: () => setEditTodoId(null),
+      style: {
+        ...C.btn(),
+        padding: "5px 10px",
+        fontSize: "12px"
+      }
+    }, "Cancel")) : /*#__PURE__*/React.createElement("div", {
       style: {
         fontSize: "13px",
-        marginTop: "3px"
-      }
+        marginTop: "3px",
+        cursor: "pointer"
+      },
+      onClick: () => {
+        setEditTodoId(t.id);
+        setEditTodoText(t.text);
+      },
+      title: "Click to edit"
     }, t.text)), /*#__PURE__*/React.createElement("button", {
       onClick: () => delTodo(t.id),
       style: {
@@ -2177,7 +2239,7 @@ function App() {
   }, "Photos (", imgFiles.length, ")"), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "grid",
-      gridTemplateColumns: "repeat(auto-fill, minmax(150px,1fr))",
+      gridTemplateColumns: "repeat(auto-fill, minmax(120px,1fr))",
       gap: "10px",
       marginBottom: "16px"
     }
@@ -2296,7 +2358,7 @@ function App() {
   }, "Delete"))))))), tab === "contacts" && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     style: {
       display: "grid",
-      gridTemplateColumns: "repeat(auto-fill, minmax(240px,1fr))",
+      gridTemplateColumns: "repeat(auto-fill, minmax(200px,1fr))",
       gap: "12px",
       marginBottom: "12px"
     }
@@ -2365,7 +2427,7 @@ function App() {
   }, "Add contact"), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "grid",
-      gridTemplateColumns: "1fr 1fr",
+      gridTemplateColumns: "repeat(auto-fill, minmax(140px,1fr))",
       gap: "10px",
       marginBottom: "12px"
     }
@@ -2630,7 +2692,7 @@ function App() {
   }, "Upload up to two background images and switch between them. A soft overlay keeps everything readable."), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "grid",
-      gridTemplateColumns: "1fr 1fr",
+      gridTemplateColumns: "repeat(auto-fill, minmax(140px,1fr))",
       gap: "12px",
       marginBottom: "12px"
     }
