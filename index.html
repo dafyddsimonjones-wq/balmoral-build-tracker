@@ -59,32 +59,34 @@ async function sbSet(key, value) {
     })
   });
 }
+
+// ── Supabase Storage file functions ──────────────────────────────────
+const BUCKET = "tracker-files";
+const STORAGE_URL = SB_URL + "/storage/v1/object/" + BUCKET + "/";
+const STORAGE_H = {
+  apikey: SB_KEY,
+  Authorization: "Bearer " + SB_KEY
+};
 async function sbGetFile(id) {
-  const url = `${SB_URL}/rest/v1/tracker_files?id=eq.${encodeURIComponent(String(id))}&select=data`;
-  const r = await fetch(url, {
-    headers: H
-  });
-  const rows = await r.json();
-  return rows?.[0]?.data ?? null;
+  // Return a direct public URL — no fetch needed, browser loads it directly
+  return STORAGE_URL + encodeURIComponent(String(id));
 }
-async function sbSetFile(id, meta, data) {
-  const r = await fetch(`${SB_URL}/rest/v1/tracker_files`, {
+async function sbSetFile(id, meta, blob) {
+  // Upload raw blob to Supabase Storage
+  await fetch(STORAGE_URL + encodeURIComponent(String(id)), {
     method: "POST",
     headers: {
-      ...H,
-      Prefer: "resolution=merge-duplicates"
+      ...STORAGE_H,
+      "Content-Type": meta.type || "application/octet-stream",
+      "x-upsert": "true"
     },
-    body: JSON.stringify({
-      id: String(id),
-      ...meta,
-      data
-    })
+    body: blob
   });
 }
 async function sbDelFile(id) {
-  await fetch(`${SB_URL}/rest/v1/tracker_files?id=eq.${encodeURIComponent(String(id))}`, {
+  await fetch(STORAGE_URL + encodeURIComponent(String(id)), {
     method: "DELETE",
-    headers: H
+    headers: STORAGE_H
   });
 }
 
@@ -949,8 +951,8 @@ function Thumb({
   const [src, setSrc] = useState(null);
   useEffect(() => {
     let cancelled = false;
-    sbGetFile(String(id)).then(d => {
-      if (!cancelled && d) setSrc(d);
+    sbGetFile(String(id)).then(url => {
+      if (!cancelled && url) setSrc(url);
     }).catch(() => {});
     return () => {
       cancelled = true;
@@ -1205,15 +1207,11 @@ function App() {
     } : p)
   });
   const openPreview = async file => {
-    try {
-      const d = await sbGetFile(String(file.id));
-      if (d) setPreview({
-        file,
-        src: d
-      });else alert("File not found in database.");
-    } catch (e) {
-      alert("Could not load file: " + e.message);
-    }
+    const src = await sbGetFile(String(file.id));
+    setPreview({
+      file,
+      src
+    });
   };
   const delFile = async id => {
     if (!confirm("Delete this file?")) return;
@@ -1233,21 +1231,23 @@ function App() {
     };
     for (const file of Array.from(list)) {
       try {
-        let dataUrl, size;
+        let blob, size;
         if (file.type.startsWith("image/")) {
+          // Compress image then convert dataUrl back to blob for upload
           const c = await compressImage(file);
           if (!c) {
             setUpErr(`Could not process "${file.name}"`);
             continue;
           }
-          dataUrl = c.dataUrl;
+          const res = await fetch(c.dataUrl);
+          blob = await res.blob();
           size = c.size;
         } else {
           if (file.size > MAX_BYTES) {
             setUpErr(`"${file.name}" too large (max 3.5MB)`);
             continue;
           }
-          dataUrl = await readAsDataUrl(file);
+          blob = file;
           size = file.size;
         }
         const id = String(Date.now()) + "-" + String(Math.floor(Math.random() * 100000));
@@ -1258,7 +1258,7 @@ function App() {
           size,
           uploadedAt: today()
         };
-        await sbSetFile(String(id), meta, dataUrl);
+        await sbSetFile(String(id), meta, blob);
         cur = {
           ...cur,
           files: [...cur.files, {
@@ -1268,7 +1268,7 @@ function App() {
         };
         await save(cur);
       } catch (e) {
-        setUpErr(`Failed to upload "${file.name}" — try a smaller file`);
+        setUpErr(`Failed to upload "${file.name}" — ${e.message}`);
       }
     }
     setUploading(false);
