@@ -1071,21 +1071,24 @@ function App() {
   };
 
   // Apply background to body - must be before early returns (rules of hooks)
+  // Apply background via fixed pseudo-element - consistent across all tabs
   useEffect(() => {
     const url = bgConfig.active ? bgConfig[bgConfig.active] : null;
+    let el = document.getElementById('bg-style');
+    if (!el) {
+      el = document.createElement('style');
+      el.id = 'bg-style';
+      document.head.appendChild(el);
+    }
     if (url) {
-      document.body.style.backgroundImage = "url(" + url + ")";
-      document.body.style.backgroundSize = 'cover';
-      document.body.style.backgroundPosition = 'center';
-      document.body.style.backgroundRepeat = 'no-repeat';
-      document.body.style.backgroundAttachment = 'scroll';
-      document.body.style.minHeight = '100vh';
+      el.textContent = 'html,body{height:100%;margin:0}body::before{content:"";position:fixed;top:0;left:0;width:100%;height:100%;background-image:url("' + url + '");background-size:cover;background-position:center;background-repeat:no-repeat;z-index:-1;}';
+      document.body.style.background = 'transparent';
     } else {
-      document.body.style.backgroundImage = 'none';
+      el.textContent = '';
       document.body.style.background = '#f5f4f0';
     }
     return () => {
-      document.body.style.backgroundImage = 'none';
+      if (el) el.textContent = '';
     };
   }, [bgConfig]);
   if (!authed) return /*#__PURE__*/React.createElement(Login, {
@@ -1359,11 +1362,10 @@ function App() {
     setChatIn("");
     setChatBusy(true);
     try {
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
+      const res = await fetch("https://balmoral-proxy.dafydd-simon-jones.workers.dev", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
-          "anthropic-dangerous-direct-browser-access": "true"
+          "Content-Type": "application/json"
         },
         body: JSON.stringify({
           model: "claude-sonnet-4-20250514",
