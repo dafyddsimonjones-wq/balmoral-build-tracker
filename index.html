@@ -1371,11 +1371,26 @@ function App() {
           model: "claude-sonnet-4-20250514",
           max_tokens: 1000,
           system: buildPrompt(data),
-          messages: hist
+          messages: hist.map(m => ({
+            role: m.role,
+            content: m.content
+          }))
         })
       });
       const json = await res.json();
-      const raw = json.content?.[0]?.text || "Sorry, something went wrong.";
+      if (json.error) {
+        save({
+          ...snap,
+          chatHistory: [...hist, {
+            role: "assistant",
+            content: "API error: " + json.error.message + " (" + json.error.type + ")",
+            changes: []
+          }]
+        });
+        setChatBusy(false);
+        return;
+      }
+      const raw = json.content?.[0]?.text || "No response received.";
       const m = raw.match(/<ACTIONS>([\s\S]*?)<\/ACTIONS>/);
       const text = raw.replace(/<ACTIONS>[\s\S]*?<\/ACTIONS>/, "").trim();
       let next = snap,
@@ -1396,13 +1411,11 @@ function App() {
         }]
       });
     } catch (e) {
-      const isCors = e.message && (e.message.includes("Failed to fetch") || e.message.includes("NetworkError") || e.message.includes("CORS"));
-      const msg = isCors ? "The Claude chat feature can\'t connect from this browser due to API security restrictions. It works when the tracker is opened inside Claude.ai. All other features (stages, to-dos, files, notes, contacts) work normally here." : "Something went wrong — please try again.";
       save({
         ...snap,
         chatHistory: [...hist, {
           role: "assistant",
-          content: msg,
+          content: "Error: " + e.message,
           changes: []
         }]
       });
