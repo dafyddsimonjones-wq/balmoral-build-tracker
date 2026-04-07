@@ -2491,8 +2491,7 @@ marginTop: “8px”
 style: {
 display: “flex”,
 flexDirection: “column”,
-height: “calc(100vh - 170px)”,
-minHeight: “500px”
+minHeight: 0
 }
 }, /*#**PURE***/React.createElement(“div”, {
 style: {
@@ -2511,13 +2510,14 @@ lineHeight: “1.6”
 }
 }, /*#**PURE***/React.createElement(“strong”, null, “Claude knows your entire build.”), “ Ask questions or request changes \u2014 "add a to-do to call June about cladding", "mark site inspection complete", "what are my urgent actions?"”)), /*#**PURE***/React.createElement(“div”, {
 style: {
-flex: 1,
 overflowY: “auto”,
 display: “flex”,
 flexDirection: “column”,
 gap: “12px”,
 padding: “4px 0”,
-marginBottom: “12px”
+marginBottom: “12px”,
+maxHeight: “55vh”,
+minHeight: “200px”
 }
 }, (!data.chatHistory || data.chatHistory.length === 0) && /*#**PURE***/React.createElement(“div”, {
 style: {
