@@ -17,8 +17,11 @@
 </head>
 <body>
   <div id="root"><div style="font-family:sans-serif;padding:2rem;color:#555">Loading…</div></div>
+  <!-- Primary CDN -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <!-- Fallback CDN if above failed -->
+  <script>if(!window.React){document.write('<scr'+'ipt src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.production.min.js"><\/scr'+'ipt><scr'+'ipt src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.production.min.js"><\/scr'+'ipt>');}</script>
   <script>
 const {
   useState,
