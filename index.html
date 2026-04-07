@@ -13,17 +13,23 @@
     @keyframes spin { to { transform: rotate(360deg); } }
     .spinner { width:32px;height:32px;border:3px solid #e8e5de;border-top-color:#006d7c;border-radius:50%;animation:spin 0.8s linear infinite; }
 
-    /* On mobile, override the chat container height so input stays visible */
+    /* Chat layout - works on all screen sizes */
+    .chat-outer {
+      min-height: 0;
+    }
+    .chat-messages {
+      height: 55vh;
+      min-height: 200px;
+    }
+
+    /* Mobile overrides */
     @media (max-width: 768px) {
-      /* Target the chat outer div - override its fixed height */
-      #root > div > div > div[style*="calc(100vh"] {
-        height: auto !important;
-        min-height: 0 !important;
+      .chat-messages {
+        height: 40vh;
+        min-height: 150px;
       }
-      /* Target the message scroll area inside it */
-      #root > div > div > div[style*="calc(100vh"] > div[style*="overflow"] {
-        max-height: 45vh !important;
-        flex: none !important;
+      .chat-input-area textarea {
+        font-size: 16px !important; /* prevents iOS zoom */
       }
     }
   </style>
@@ -2580,11 +2586,10 @@ function App() {
       marginTop: "8px"
     }
   }, n.date)))), tab === "claude" && /*#__PURE__*/React.createElement("div", {
+    className: "chat-outer",
     style: {
       display: "flex",
-      flexDirection: "column",
-      height: "calc(100vh - 170px)",
-      minHeight: "400px"
+      flexDirection: "column"
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
@@ -2602,8 +2607,8 @@ function App() {
       lineHeight: "1.6"
     }
   }, /*#__PURE__*/React.createElement("strong", null, "Claude knows your entire build."), " Ask questions or request changes \u2014 \"add a to-do to call June about cladding\", \"mark site inspection complete\", \"what are my urgent actions?\"")), /*#__PURE__*/React.createElement("div", {
+    className: "chat-messages",
     style: {
-      flex: 1,
       overflowY: "auto",
       display: "flex",
       flexDirection: "column",
@@ -2705,6 +2710,7 @@ function App() {
   }))))), /*#__PURE__*/React.createElement("div", {
     ref: chatEnd
   })), /*#__PURE__*/React.createElement("div", {
+    className: "chat-input-area",
     style: {
       display: "flex",
       gap: "8px",
