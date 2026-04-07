@@ -12,6 +12,20 @@
     @keyframes bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-5px)} }
     @keyframes spin { to { transform: rotate(360deg); } }
     .spinner { width:32px;height:32px;border:3px solid #e8e5de;border-top-color:#006d7c;border-radius:50%;animation:spin 0.8s linear infinite; }
+
+    /* On mobile, override the chat container height so input stays visible */
+    @media (max-width: 768px) {
+      /* Target the chat outer div - override its fixed height */
+      #root > div > div > div[style*="calc(100vh"] {
+        height: auto !important;
+        min-height: 0 !important;
+      }
+      /* Target the message scroll area inside it */
+      #root > div > div > div[style*="calc(100vh"] > div[style*="overflow"] {
+        max-height: 45vh !important;
+        flex: none !important;
+      }
+    }
   </style>
 </head>
 <body>
