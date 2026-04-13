@@ -1051,6 +1051,16 @@ function App() {
     email: ""
   });
   const [showCon, setShowCon] = useState(false);
+  const [editConId, setEditConId] = useState(null);
+  const [editCon, setEditCon] = useState({
+    name: "",
+    role: "",
+    company: "",
+    phone: "",
+    email: ""
+  });
+  const [editNoteId, setEditNoteId] = useState(null);
+  const [editNoteText, setEditNoteText] = useState("");
   const [editSt, setEditSt] = useState(null);
   const [stDate, setStDate] = useState("");
   const [fileCat, setFileCat] = useState("All");
@@ -1267,6 +1277,36 @@ function App() {
       email: ""
     });
     setShowCon(false);
+  };
+  const delCon = id => {
+    if (!confirm("Delete this contact?")) return;
+    save({
+      ...data,
+      contacts: data.contacts.filter(c => c.id !== id)
+    });
+  };
+  const saveConEdit = () => {
+    if (!editCon.name.trim()) return;
+    save({
+      ...data,
+      contacts: data.contacts.map(c => c.id === editConId ? {
+        ...c,
+        ...editCon
+      } : c)
+    });
+    setEditConId(null);
+  };
+  const saveNoteEdit = id => {
+    if (!editNoteText.trim()) return;
+    save({
+      ...data,
+      notes: data.notes.map(n => n.id === id ? {
+        ...n,
+        text: editNoteText.trim()
+      } : n)
+    });
+    setEditNoteId(null);
+    setEditNoteText("");
   };
   const tickPay = id => save({
     ...data,
@@ -2432,6 +2472,51 @@ function App() {
       ...C.card,
       marginBottom: 0
     }
+  }, editConId === c.id ? /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "grid",
+      gridTemplateColumns: "1fr 1fr",
+      gap: "8px",
+      marginBottom: "10px"
+    }
+  }, [["name", "Name *"], ["role", "Role"], ["company", "Company"], ["phone", "Phone"], ["email", "Email"]].map(([f, l]) => /*#__PURE__*/React.createElement("input", {
+    key: f,
+    placeholder: l,
+    value: editCon[f],
+    onChange: e => setEditCon(p => ({
+      ...p,
+      [f]: e.target.value
+    })),
+    style: {
+      ...C.inp,
+      fontSize: "12px"
+    }
+  }))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: "8px"
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    style: {
+      ...C.btn("pri"),
+      fontSize: "12px",
+      padding: "6px 12px"
+    },
+    onClick: saveConEdit
+  }, "Save"), /*#__PURE__*/React.createElement("button", {
+    style: {
+      ...C.btn(),
+      fontSize: "12px",
+      padding: "6px 12px"
+    },
+    onClick: () => setEditConId(null)
+  }, "Cancel"))) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "flex-start",
+      marginBottom: "8px"
+    }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       width: "36px",
@@ -2443,10 +2528,37 @@ function App() {
       justifyContent: "center",
       color: "#fff",
       fontWeight: "600",
-      fontSize: "13px",
-      marginBottom: "10px"
+      fontSize: "13px"
     }
   }, c.name.split(" ").map(w => w[0]).slice(0, 2).join("")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: "6px"
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => {
+      setEditConId(c.id);
+      setEditCon({
+        name: c.name,
+        role: c.role || "",
+        company: c.company || "",
+        phone: c.phone || "",
+        email: c.email || ""
+      });
+    },
+    style: {
+      ...C.btn(),
+      fontSize: "11px",
+      padding: "4px 10px"
+    }
+  }, "Edit"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => delCon(c.id),
+    style: {
+      ...C.btn("red"),
+      fontSize: "11px",
+      padding: "4px 10px"
+    }
+  }, "Delete"))), /*#__PURE__*/React.createElement("div", {
     style: {
       fontWeight: "600"
     }
@@ -2470,21 +2582,21 @@ function App() {
       gap: "4px"
     }
   }, c.phone && /*#__PURE__*/React.createElement("a", {
-    href: `tel:${c.phone}`,
+    href: "tel:" + c.phone,
     style: {
       fontSize: "13px",
       color: "#006d7c",
       textDecoration: "none"
     }
   }, "\uD83D\uDCDE ", c.phone), c.email && /*#__PURE__*/React.createElement("a", {
-    href: `mailto:${c.email}`,
+    href: "mailto:" + c.email,
     style: {
       fontSize: "13px",
       color: "#006d7c",
       textDecoration: "none",
       wordBreak: "break-all"
     }
-  }, "\u2709 ", c.email))))), showCon ? /*#__PURE__*/React.createElement("div", {
+  }, "\u2709 ", c.email)))))), showCon ? /*#__PURE__*/React.createElement("div", {
     style: C.card
   }, /*#__PURE__*/React.createElement("div", {
     style: C.h
@@ -2542,7 +2654,36 @@ function App() {
   }, "No notes yet."), [...data.notes].reverse().map(n => /*#__PURE__*/React.createElement("div", {
     key: n.id,
     style: C.card
-  }, /*#__PURE__*/React.createElement("div", {
+  }, editNoteId === n.id ? /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("textarea", {
+    autoFocus: true,
+    value: editNoteText,
+    onChange: e => setEditNoteText(e.target.value),
+    rows: 4,
+    style: {
+      ...C.inp,
+      resize: "vertical",
+      marginBottom: "8px"
+    }
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: "8px"
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    style: {
+      ...C.btn("pri"),
+      fontSize: "12px",
+      padding: "6px 12px"
+    },
+    onClick: () => saveNoteEdit(n.id)
+  }, "Save"), /*#__PURE__*/React.createElement("button", {
+    style: {
+      ...C.btn(),
+      fontSize: "12px",
+      padding: "6px 12px"
+    },
+    onClick: () => setEditNoteId(null)
+  }, "Cancel"))) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       justifyContent: "space-between",
@@ -2555,24 +2696,39 @@ function App() {
       flex: 1,
       whiteSpace: "pre-wrap"
     }
-  }, n.text), /*#__PURE__*/React.createElement("button", {
+  }, n.text), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: "6px",
+      marginLeft: "12px",
+      flexShrink: 0
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => {
+      setEditNoteId(n.id);
+      setEditNoteText(n.text);
+    },
+    style: {
+      ...C.btn(),
+      fontSize: "11px",
+      padding: "4px 8px"
+    }
+  }, "Edit"), /*#__PURE__*/React.createElement("button", {
     onClick: () => delNote(n.id),
     style: {
       background: "none",
       border: "none",
       color: "#ccc",
       cursor: "pointer",
-      fontSize: "18px",
-      marginLeft: "12px",
-      flexShrink: 0
+      fontSize: "18px"
     }
-  }, "\xD7")), /*#__PURE__*/React.createElement("div", {
+  }, "\xD7"))), /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: "11px",
       color: "#8fa3ad",
       marginTop: "8px"
     }
-  }, n.date)))), tab === "claude" && /*#__PURE__*/React.createElement("div", {
+  }, n.date))))), tab === "claude" && /*#__PURE__*/React.createElement("div", {
     className: "chat-outer",
     style: {
       display: "flex",
