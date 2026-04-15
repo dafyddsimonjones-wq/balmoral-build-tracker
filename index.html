@@ -477,9 +477,9 @@ COMPLETED: ${done.map(t => `[id:${t.id}] ${t.text}`).join(" | ") || "none"}
 PAYMENTS:
 ${d.payments.map(p => `[id:${p.id}] ${p.stage}: ${p.amount ? "$" + p.amount.toLocaleString() : "TBC"} — ${p.paid ? "PAID " + p.paidDate : "unpaid"}`).join("\n")}
 
-CONTACTS: ${d.contacts.map(c => `${c.name} (${c.phone})`).join(", ")}
+CONTACTS: ${d.contacts.map(c => `[id:${c.id}] ${c.company || c.name} — ${c.name} (${c.phone})`).join(", ")}
 FILES: ${d.files.length} uploaded
-NOTES: ${d.notes.map(n => n.date + ": " + n.text).join(" | ") || "none"}
+NOTES: ${d.notes.map(n => `[id:${n.id}][contact:${n.contactId || "none"}] ${n.date}: ${n.text}`).join(" | ") || "none"}
 
 You can update the tracker with an ACTIONS block (only when user asks for changes):
 <ACTIONS>
@@ -488,7 +488,8 @@ You can update the tracker with an ACTIONS block (only when user asks for change
   {"type":"complete_todo","id":1},
   {"type":"delete_todo","id":1},
   {"type":"update_stage","id":2,"status":"complete|active|pending","date":"15 Apr 2026"},
-  {"type":"add_note","text":"..."},
+  {"type":"add_note","text":"...","contactId":"contact_id_or_null"},
+  {"type":"update_note","id":"note_id","text":"...","contactId":"contact_id_or_null"},
   {"type":"add_contact","name":"...","role":"...","company":"...","phone":"...","email":"..."},
   {"type":"update_payment","id":3,"amount":90000,"paid":true,"paidDate":"1 Jun 2026"},
   {"type":"set_contract_price","amount":620840}
@@ -544,9 +545,21 @@ function applyActions(data, actions) {
         d.notes = [...d.notes, {
           id: Date.now() + Math.random(),
           text: a.text,
-          date: today()
+          date: today(),
+          contactId: a.contactId || null
         }];
         log.push("Note added");
+      } else if (a.type === "update_note") {
+        d.notes = d.notes.map(n => n.id == a.id ? {
+          ...n,
+          ...(a.text && {
+            text: a.text
+          }),
+          ...("contactId" in a && {
+            contactId: a.contactId || null
+          })
+        } : n);
+        log.push("Note updated");
       } else if (a.type === "add_contact") {
         d.contacts = [...d.contacts, {
           id: Date.now() + Math.random(),
@@ -1152,21 +1165,17 @@ function App() {
     };
   }, [bgConfig]);
 
-  // Auto-rotate background if both slots have images
+  // On load: if both slots filled, alternate which one is active
   useEffect(() => {
     if (!bgConfig.slot1 || !bgConfig.slot2) return;
-    const interval = setInterval(() => {
-      setBgConfig(prev => {
-        const next = {
-          ...prev,
-          active: prev.active === "slot1" ? "slot2" : "slot1"
-        };
-        sbSet("bg", JSON.stringify(next)).catch(() => {});
-        return next;
-      });
-    }, 8000);
-    return () => clearInterval(interval);
-  }, [bgConfig.slot1, bgConfig.slot2]);
+    const next = {
+      ...bgConfig,
+      active: bgConfig.active === "slot1" ? "slot2" : "slot1"
+    };
+    saveBg(next);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // empty deps = runs once on mount only
+
   if (!authed) return /*#__PURE__*/React.createElement(Login, {
     onAuth: () => setAuthed(true),
     correctPwd: correctPwd
