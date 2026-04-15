@@ -481,7 +481,8 @@ CONTACTS: ${d.contacts.map(c => `[id:${c.id}] ${c.company || c.name} — ${c.nam
 FILES: ${d.files.length} uploaded
 NOTES: ${d.notes.map(n => `[id:${n.id}][contact:${n.contactId || "none"}] ${n.date}: ${n.text}`).join(" | ") || "none"}
 
-You can update the tracker with an ACTIONS block (only when user asks for changes):
+You can update the tracker with an ACTIONS block (only when user asks for changes).
+IMPORTANT: To link an existing note to a contact, use update_note. The id and contactId must be strings matching EXACTLY what appears in [id:...] brackets above — copy them character for character:
 <ACTIONS>
 [
   {"type":"add_todo","text":"...","priority":"high|medium|low","cat":"Legal|Finance|Design|Demolition|Comparison"},
@@ -489,7 +490,9 @@ You can update the tracker with an ACTIONS block (only when user asks for change
   {"type":"delete_todo","id":1},
   {"type":"update_stage","id":2,"status":"complete|active|pending","date":"15 Apr 2026"},
   {"type":"add_note","text":"...","contactId":"contact_id_or_null"},
-  {"type":"update_note","id":"note_id","text":"...","contactId":"contact_id_or_null"},
+  {"type":"update_note","id":"note_id","contactId":"contact_id_here"},
+  // update_note: omit "text" to keep existing text and just change contactId
+  // use contactId: null to unlink, or the contact id number to link
   {"type":"add_contact","name":"...","role":"...","company":"...","phone":"...","email":"..."},
   {"type":"update_payment","id":3,"amount":90000,"paid":true,"paidDate":"1 Jun 2026"},
   {"type":"set_contract_price","amount":620840}
@@ -543,23 +546,23 @@ function applyActions(data, actions) {
         if (s) log.push(`Stage "${s.name}" → ${a.status || "updated"}`);
       } else if (a.type === "add_note") {
         d.notes = [...d.notes, {
-          id: Date.now() + Math.random(),
+          id: String(Date.now()),
           text: a.text,
           date: today(),
-          contactId: a.contactId || null
+          contactId: a.contactId ? String(a.contactId) : null
         }];
         log.push("Note added");
       } else if (a.type === "update_note") {
-        d.notes = d.notes.map(n => n.id == a.id ? {
+        d.notes = d.notes.map(n => String(n.id) === String(a.id) ? {
           ...n,
           ...(a.text && {
             text: a.text
           }),
           ...("contactId" in a && {
-            contactId: a.contactId || null
+            contactId: a.contactId ? String(a.contactId) : null
           })
         } : n);
-        log.push("Note updated");
+        log.push("Note linked/updated");
       } else if (a.type === "add_contact") {
         d.contacts = [...d.contacts, {
           id: Date.now() + Math.random(),
@@ -1275,10 +1278,10 @@ function App() {
     save({
       ...data,
       notes: [...data.notes, {
-        id: Date.now(),
+        id: String(Date.now()),
         text: newNote.trim(),
         date: today(),
-        contactId: conId || null
+        contactId: conId ? String(conId) : null
       }]
     });
     setNewNote("");
@@ -2640,7 +2643,7 @@ function App() {
       width: "100%",
       textAlign: "left"
     }
-  }, "\uD83D\uDCDD ", data.notes.filter(n => n.contactId === c.id).length, " note", data.notes.filter(n => n.contactId === c.id).length !== 1 ? "s" : "", " \xB7 View / Add"))))), showCon ? /*#__PURE__*/React.createElement("div", {
+  }, "\uD83D\uDCDD ", data.notes.filter(n => String(n.contactId) === String(c.id)).length, " note", data.notes.filter(n => String(n.contactId) === String(c.id)).length !== 1 ? "s" : "", " \xB7 View / Add"))))), showCon ? /*#__PURE__*/React.createElement("div", {
     style: C.card
   }, /*#__PURE__*/React.createElement("div", {
     style: C.h
@@ -2715,13 +2718,13 @@ function App() {
   }), /*#__PURE__*/React.createElement("button", {
     style: C.btn("pri"),
     onClick: () => addNote(noteConId)
-  }, "Save note")), (noteConId ? data.notes.filter(n => n.contactId === noteConId) : data.notes).length === 0 && /*#__PURE__*/React.createElement("div", {
+  }, "Save note")), (noteConId ? data.notes.filter(n => String(n.contactId) === String(noteConId)) : data.notes).length === 0 && /*#__PURE__*/React.createElement("div", {
     style: {
       ...C.card,
       color: "#8fa3ad",
       fontSize: "13px"
     }
-  }, noteConId ? "No notes for this contact yet." : "No notes yet."), [...(noteConId ? data.notes.filter(n => n.contactId === noteConId) : data.notes)].reverse().map(n => /*#__PURE__*/React.createElement("div", {
+  }, noteConId ? "No notes for this contact yet." : "No notes yet."), [...(noteConId ? data.notes.filter(n => String(n.contactId) === String(noteConId)) : data.notes)].reverse().map(n => /*#__PURE__*/React.createElement("div", {
     key: n.id,
     style: C.card
   }, editNoteId === n.id ? /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("textarea", {
