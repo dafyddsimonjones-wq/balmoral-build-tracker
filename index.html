@@ -1078,6 +1078,8 @@ function App() {
   });
   const [editNoteId, setEditNoteId] = useState(null);
   const [editNoteText, setEditNoteText] = useState("");
+  const [editFileId, setEditFileId] = useState(null);
+  const [editFileName, setEditFileName] = useState("");
   const [editSt, setEditSt] = useState(null);
   const [stDate, setStDate] = useState("");
   const [fileCat, setFileCat] = useState("All");
@@ -1359,6 +1361,15 @@ function App() {
       file,
       src
     });
+  };
+  const linkFile = (id, field, value) => {
+    save({...data, files: data.files.map(f => f.id === id ? {...f, [field]: value || null} : f)});
+  };
+  const renameFile = async (id, newName) => {
+    if (!newName.trim()) return;
+    const updated = {...data, files: data.files.map(f => f.id === id ? {...f, name: newName.trim()} : f)};
+    await save(updated);
+    setEditFileId(null);
   };
   const delFile = async id => {
     if (!confirm("Delete this file?")) return;
@@ -2389,24 +2400,16 @@ function App() {
     onClick: () => openPreview(f)
   }, /*#__PURE__*/React.createElement(Thumb, {
     id: f.id
-  }), /*#__PURE__*/React.createElement("div", {
-    style: {
-      padding: "6px 8px"
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: "11px",
-      fontWeight: "500",
-      overflow: "hidden",
-      textOverflow: "ellipsis",
-      whiteSpace: "nowrap"
-    }
-  }, f.name), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: "10px",
-      color: "#8fa3ad"
-    }
-  }, f.uploadedAt)), /*#__PURE__*/React.createElement("button", {
+  }), /*#__PURE__*/React.createElement("div",{style:{padding:"6px 8px"}},
+    editFileId===f.id
+      ? /*#__PURE__*/React.createElement("div",{style:{display:"flex",gap:"4px"},onClick:e=>e.stopPropagation()},
+          /*#__PURE__*/React.createElement("input",{autoFocus:true,value:editFileName,onChange:e=>setEditFileName(e.target.value),onKeyDown:e=>{if(e.key==="Enter")renameFile(f.id,editFileName);if(e.key==="Escape")setEditFileId(null);},style:{fontSize:"11px",padding:"3px 5px",borderRadius:"5px",border:"1px solid #dedad2",width:"100%",fontFamily:"inherit",outline:"none"}}),
+          /*#__PURE__*/React.createElement("button",{onClick:e=>{e.stopPropagation();renameFile(f.id,editFileName);},style:{fontSize:"10px",padding:"3px 6px",borderRadius:"5px",border:"none",background:"#006d7c",color:"#fff",cursor:"pointer",flexShrink:0}},"✓"))
+      : /*#__PURE__*/React.createElement("div",{style:{fontSize:"11px",fontWeight:"500",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",cursor:"pointer"},title:"Click to rename",onClick:e=>{e.stopPropagation();setEditFileId(f.id);setEditFileName(f.name);}},f.name),
+    /*#__PURE__*/React.createElement("div",{style:{fontSize:"10px",color:"#8fa3ad"}},f.uploadedAt),
+    /*#__PURE__*/React.createElement("select",{value:f.contactId||"",onChange:e=>{e.stopPropagation();linkFile(f.id,"contactId",e.target.value);},onClick:e=>e.stopPropagation(),style:{fontSize:"10px",padding:"2px 4px",borderRadius:"4px",border:"1px solid #dedad2",background:"#faf9f7",fontFamily:"inherit",color:f.contactId?"#006d7c":"#8fa3ad",width:"100%",marginTop:"3px"}},
+      /*#__PURE__*/React.createElement("option",{value:""},"— Contact"),
+      data.contacts.map(c=>/*#__PURE__*/React.createElement("option",{key:c.id,value:c.id},c.company||c.name)))), /*#__PURE__*/React.createElement("button", {
     onClick: e => {
       e.stopPropagation();
       delFile(f.id);
@@ -2464,20 +2467,24 @@ function App() {
       flex: 1,
       minWidth: 0
     }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontWeight: "500",
-      fontSize: "13px",
-      overflow: "hidden",
-      textOverflow: "ellipsis",
-      whiteSpace: "nowrap"
-    }
-  }, f.name), /*#__PURE__*/React.createElement("div", {
+  }, editFileId===f.id
+    ? /*#__PURE__*/React.createElement("div",{style:{display:"flex",gap:"6px",alignItems:"center",marginBottom:"2px"}},
+        /*#__PURE__*/React.createElement("input",{autoFocus:true,value:editFileName,onChange:e=>setEditFileName(e.target.value),onKeyDown:e=>{if(e.key==="Enter")renameFile(f.id,editFileName);if(e.key==="Escape")setEditFileId(null);},style:{fontSize:"13px",padding:"4px 8px",borderRadius:"6px",border:"1px solid #dedad2",flex:1,fontFamily:"inherit",outline:"none"}}),
+        /*#__PURE__*/React.createElement("button",{onClick:()=>renameFile(f.id,editFileName),style:{fontSize:"12px",padding:"4px 10px",borderRadius:"6px",border:"none",background:"#006d7c",color:"#fff",cursor:"pointer",flexShrink:0}},"Save"),
+        /*#__PURE__*/React.createElement("button",{onClick:()=>setEditFileId(null),style:{fontSize:"12px",padding:"4px 10px",borderRadius:"6px",border:"1px solid #dedad2",background:"#f0ede6",cursor:"pointer",flexShrink:0}},"Cancel"))
+    : /*#__PURE__*/React.createElement("div",{style:{fontWeight:"500",fontSize:"13px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",cursor:"pointer"},title:"Click to rename",onClick:()=>{setEditFileId(f.id);setEditFileName(f.name);}},f.name), /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: "11px",
       color: "#7a8e99"
     }
-  }, f.cat, " \xB7 ", Math.round((f.size || 0) / 1024), "KB \xB7 ", f.uploadedAt)), /*#__PURE__*/React.createElement("div", {
+  }, f.cat, " \xB7 ", Math.round((f.size || 0) / 1024), "KB \xB7 ", f.uploadedAt),
+  /*#__PURE__*/React.createElement("div",{style:{display:"flex",gap:"6px",marginTop:"5px",flexWrap:"wrap"}},
+    /*#__PURE__*/React.createElement("select",{value:f.contactId||"",onChange:e=>linkFile(f.id,"contactId",e.target.value),style:{fontSize:"11px",padding:"2px 6px",borderRadius:"6px",border:"1px solid #dedad2",background:"#faf9f7",fontFamily:"inherit",color:f.contactId?"#006d7c":"#8fa3ad",flex:1,minWidth:"80px"}},
+      /*#__PURE__*/React.createElement("option",{value:""},"— Contact"),
+      data.contacts.map(c=>/*#__PURE__*/React.createElement("option",{key:c.id,value:c.id},c.company||c.name))),
+    /*#__PURE__*/React.createElement("select",{value:f.cat||"Other",onChange:e=>linkFile(f.id,"cat",e.target.value),style:{fontSize:"11px",padding:"2px 6px",borderRadius:"6px",border:"1px solid #dedad2",background:"#faf9f7",fontFamily:"inherit",color:"#5a6e7a",flex:1,minWidth:"80px"}},
+      ["Quotes & Estimates","Plans & Drawings","Site Photos","Council & Legal","Contracts","Other"].map(c=>/*#__PURE__*/React.createElement("option",{key:c,value:c},c))))
+  ), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       gap: "6px",
